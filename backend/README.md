@@ -44,6 +44,16 @@ postgres://postgres:postgres@localhost:5432/attendance_payroll
 
 Data awal dikosongkan. Buat akun karyawan dari aplikasi mobile atau endpoint register.
 
+Admin pertama dibuat dari aplikasi mobile dengan pilihan `Admin pertama` atau endpoint bootstrap admin. Endpoint ini hanya berhasil selama belum ada admin aktif.
+
+Register admin pertama:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register-admin \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Admin Owner","username":"admin","password":"passwordku"}'
+```
+
 Register:
 
 ```bash
@@ -86,6 +96,7 @@ Authorization: Bearer <token>
 
 - `POST /api/auth/login`
 - `POST /api/auth/register`
+- `POST /api/auth/register-admin`
 - `GET /api/auth/me`
 
 ### Employee dan Salary Rate

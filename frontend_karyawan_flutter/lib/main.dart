@@ -107,6 +107,9 @@ class _EmployeeRootState extends State<EmployeeRoot> {
     if (stage == AppStage.auth || session == null) {
       return AuthScreen(api: api, onAuthenticated: _setSession);
     }
+    if (session!.user.role == 'admin') {
+      return AdminShell(api: api, session: session!, onLogout: _logout);
+    }
     return EmployeeShell(api: api, session: session!, onLogout: _logout);
   }
 }
@@ -161,6 +164,7 @@ class SplashScreen extends StatelessWidget {
 }
 
 enum AuthMode { login, register }
+enum RegisterRole { employee, admin }
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, required this.api, required this.onAuthenticated});
@@ -173,6 +177,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   AuthMode mode = AuthMode.login;
+  RegisterRole registerRole = RegisterRole.employee;
   bool loading = false;
   String? error;
   final nameController = TextEditingController();
@@ -200,7 +205,11 @@ class _AuthScreenState extends State<AuthScreen> {
       error = null;
     });
     try {
-      final nextSession = mode == AuthMode.login ? await widget.api.login(username, password) : await widget.api.register(name: name, username: username, password: password);
+      final nextSession = mode == AuthMode.login
+          ? await widget.api.login(username, password)
+          : registerRole == RegisterRole.admin
+              ? await widget.api.registerAdmin(name: name, username: username, password: password)
+              : await widget.api.register(name: name, username: username, password: password);
       widget.onAuthenticated(nextSession);
     } catch (err) {
       setState(() => error = friendlyError(err));
@@ -264,6 +273,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   if (!isLogin) ...[
                     AuthField(label: 'Nama lengkap', controller: nameController, hint: 'Isi nama lengkap'),
                     const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(child: AuthToggle(label: 'Karyawan', selected: registerRole == RegisterRole.employee, onTap: () => setState(() => registerRole = RegisterRole.employee))),
+                        const SizedBox(width: 10),
+                        Expanded(child: AuthToggle(label: 'Admin pertama', selected: registerRole == RegisterRole.admin, onTap: () => setState(() => registerRole = RegisterRole.admin))),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                   ],
                   AuthField(label: 'Username', controller: usernameController, hint: 'Isi username'),
                   const SizedBox(height: 14),
@@ -275,7 +292,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 20),
                   loading ? const Center(child: CircularProgressIndicator()) : PrimaryButton(label: isLogin ? 'MASUK' : 'REGISTER & MASUK', onPressed: _submit),
                   const SizedBox(height: 12),
-                  Text(isLogin ? 'Masukkan akun yang sudah terdaftar.' : 'Akun baru langsung aktif setelah registrasi.', textAlign: TextAlign.center, style: captionStyle()),
+                  Text(isLogin ? 'Masukkan akun yang sudah terdaftar.' : registerRole == RegisterRole.admin ? 'Admin pertama hanya bisa dibuat satu kali.' : 'Akun karyawan langsung aktif setelah registrasi.', textAlign: TextAlign.center, style: captionStyle()),
                 ],
               ),
             ),
@@ -327,6 +344,456 @@ class AuthField extends StatelessWidget {
         obscureText: obscureText,
         decoration: inputDecoration(hint),
       ),
+    );
+  }
+}
+
+enum AdminTab { dashboard, activity, employees, overtime, payroll }
+
+class AdminShell extends StatefulWidget {
+  const AdminShell({super.key, required this.api, required this.session, required this.onLogout});
+
+  final ApiClient api;
+  final AuthSession session;
+  final VoidCallback onLogout;
+
+  @override
+  State<AdminShell> createState() => _AdminShellState();
+}
+
+class _AdminShellState extends State<AdminShell> {
+  AdminTab tab = AdminTab.dashboard;
+  bool loading = true;
+  String? error;
+  AdminSummary? summary;
+  List<ActivityItem> activity = [];
+  List<EmployeeRecord> employees = [];
+  List<Overtime> pendingOvertime = [];
+  List<Payroll> payrolls = [];
+  final periodStartController = TextEditingController();
+  final periodEndController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    periodStartController.dispose();
+    periodEndController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final results = await Future.wait([
+        widget.api.adminDashboard(widget.session.token),
+        widget.api.activity(widget.session.token),
+        widget.api.employees(widget.session.token),
+        widget.api.pendingOvertime(widget.session.token),
+        widget.api.payrolls(widget.session.token),
+      ]);
+      setState(() {
+        summary = results[0] as AdminSummary;
+        activity = results[1] as List<ActivityItem>;
+        employees = results[2] as List<EmployeeRecord>;
+        pendingOvertime = results[3] as List<Overtime>;
+        payrolls = results[4] as List<Payroll>;
+      });
+    } catch (err) {
+      setState(() => error = friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _reviewOvertime(String id, String action) async {
+    setState(() => loading = true);
+    try {
+      await widget.api.reviewOvertime(widget.session.token, id, action);
+      _snack(action == 'approve' ? 'Lembur disetujui.' : 'Lembur ditolak.');
+      await _loadData();
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _generatePayroll() async {
+    final start = periodStartController.text.trim();
+    final end = periodEndController.text.trim();
+    if (!isDateInput(start) || !isDateInput(end)) {
+      _snack('Isi periode dengan format YYYY-MM-DD.');
+      return;
+    }
+    setState(() => loading = true);
+    try {
+      await widget.api.generatePayroll(widget.session.token, start, end);
+      _snack('Draft payroll dibuat.');
+      await _loadData();
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _publishPayroll(String id) async {
+    setState(() => loading = true);
+    try {
+      await widget.api.publishPayroll(widget.session.token, id);
+      _snack('Payslip diterbitkan ke karyawan.');
+      await _loadData();
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _markPaid(String id) async {
+    setState(() => loading = true);
+    try {
+      await widget.api.markPayrollPaid(widget.session.token, id);
+      _snack('Payroll ditandai paid.');
+      await _loadData();
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = switch (tab) {
+      AdminTab.dashboard => AdminDashboardScreen(summary: summary, pendingOvertime: pendingOvertime.length, onRefresh: _loadData),
+      AdminTab.activity => AdminActivityScreen(items: activity),
+      AdminTab.employees => AdminEmployeesScreen(items: employees),
+      AdminTab.overtime => AdminOvertimeScreen(items: pendingOvertime, onApprove: (id) => _reviewOvertime(id, 'approve'), onReject: (id) => _reviewOvertime(id, 'reject')),
+      AdminTab.payroll => AdminPayrollScreen(
+          payrolls: payrolls,
+          periodStartController: periodStartController,
+          periodEndController: periodEndController,
+          onGenerate: _generatePayroll,
+          onPublish: _publishPayroll,
+          onMarkPaid: _markPaid,
+        ),
+    };
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            AdminTopAppBar(user: widget.session.user, tab: tab, onLogout: widget.onLogout),
+            if (loading) const LinearProgressIndicator(minHeight: 2),
+            if (error != null) ErrorBanner(message: error!, onRetry: _loadData),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadData,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 96),
+                  children: [content],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: AdminBottomNav(tab: tab, onChanged: (nextTab) => setState(() => tab = nextTab)),
+    );
+  }
+}
+
+class AdminTopAppBar extends StatelessWidget {
+  const AdminTopAppBar({super.key, required this.user, required this.tab, required this.onLogout});
+  final AppUser user;
+  final AdminTab tab;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (tab) {
+      AdminTab.dashboard => 'Dashboard Admin',
+      AdminTab.activity => 'Activity Tim',
+      AdminTab.employees => 'Data Karyawan',
+      AdminTab.overtime => 'Review Lembur',
+      AdminTab.payroll => 'Payroll',
+    };
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+      decoration: const BoxDecoration(color: AppColors.card, border: Border(bottom: BorderSide(color: AppColors.line))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Admin · ${todayLabel()}', style: captionStyle()),
+                const SizedBox(height: 4),
+                Text(title, style: titleStyle()),
+                const SizedBox(height: 4),
+                Text(user.name, style: captionStyle(weight: FontWeight.w800)),
+              ],
+            ),
+          ),
+          IconButton(onPressed: onLogout, icon: const Icon(Icons.logout_outlined, color: AppColors.primary)),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminDashboardScreen extends StatelessWidget {
+  const AdminDashboardScreen({super.key, required this.summary, required this.pendingOvertime, required this.onRefresh});
+  final AdminSummary? summary;
+  final int pendingOvertime;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = summary;
+    if (data == null) return const EmptyState(message: 'Dashboard admin belum tersedia.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Ringkasan hari ini', style: sectionStyle()),
+              const SizedBox(height: 14),
+              Row(children: [Expanded(child: AdminMetric(label: 'Masuk', value: '${data.masuk}', color: AppColors.success)), const SizedBox(width: 10), Expanded(child: AdminMetric(label: 'Belum', value: '${data.belumMasuk}', color: AppColors.warning))]),
+              const SizedBox(height: 10),
+              Row(children: [Expanded(child: AdminMetric(label: 'Lembur', value: '${data.lembur}', color: AppColors.accent)), const SizedBox(width: 10), Expanded(child: AdminMetric(label: 'Review', value: '$pendingOvertime', color: AppColors.primary))]),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        PrimaryButton(label: 'REFRESH DATA KARYAWAN', onPressed: onRefresh),
+      ],
+    );
+  }
+}
+
+class AdminMetric extends StatelessWidget {
+  const AdminMetric({super.key, required this.label, required this.value, required this.color});
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(18), border: Border.all(color: color.withValues(alpha: 0.2))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.8)),
+          const SizedBox(height: 4),
+          Text(label, style: captionStyle(weight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminActivityScreen extends StatelessWidget {
+  const AdminActivityScreen({super.key, required this.items});
+  final List<ActivityItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const EmptyState(message: 'Belum ada karyawan aktif. Data akan muncul setelah karyawan register atau check-in.');
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items.map((item) => ActivityTile(item: item)).toList(),
+      ),
+    );
+  }
+}
+
+class AdminEmployeesScreen extends StatelessWidget {
+  const AdminEmployeesScreen({super.key, required this.items});
+  final List<EmployeeRecord> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const EmptyState(message: 'Belum ada karyawan. Minta karyawan register dari aplikasi mobile.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: items.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: EmployeeCard(item: item))).toList(),
+    );
+  }
+}
+
+class EmployeeCard extends StatelessWidget {
+  const EmployeeCard({super.key, required this.item});
+  final EmployeeRecord item;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.name, style: sectionStyle()),
+          const SizedBox(height: 6),
+          Text('${item.employeeCode} · ${item.status}', style: captionStyle(weight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminOvertimeScreen extends StatelessWidget {
+  const AdminOvertimeScreen({super.key, required this.items, required this.onApprove, required this.onReject});
+  final List<Overtime> items;
+  final ValueChanged<String> onApprove;
+  final ValueChanged<String> onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const EmptyState(message: 'Tidak ada lembur yang menunggu review.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: items.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: OvertimeReviewCard(item: item, onApprove: () => onApprove(item.id), onReject: () => onReject(item.id)))).toList(),
+    );
+  }
+}
+
+class OvertimeReviewCard extends StatelessWidget {
+  const OvertimeReviewCard({super.key, required this.item, required this.onApprove, required this.onReject});
+  final Overtime item;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.employeeName ?? 'Karyawan', style: sectionStyle()),
+          const SizedBox(height: 6),
+          Text(item.projectName, style: bodyStyle(weight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text('${durationLabel(item.durationMinutes)} · ${rupiah(item.amount)}', style: captionStyle(weight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: OutlinedButton(onPressed: onReject, child: const Text('Tolak'))),
+              const SizedBox(width: 10),
+              Expanded(child: FilledButton(onPressed: onApprove, child: const Text('Approve'))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminPayrollScreen extends StatelessWidget {
+  const AdminPayrollScreen({super.key, required this.payrolls, required this.periodStartController, required this.periodEndController, required this.onGenerate, required this.onPublish, required this.onMarkPaid});
+  final List<Payroll> payrolls;
+  final TextEditingController periodStartController;
+  final TextEditingController periodEndController;
+  final VoidCallback onGenerate;
+  final ValueChanged<String> onPublish;
+  final ValueChanged<String> onMarkPaid;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Generate payroll', style: sectionStyle()),
+              const SizedBox(height: 14),
+              AppTextField(label: 'Periode mulai', controller: periodStartController, hint: 'YYYY-MM-DD'),
+              const SizedBox(height: 12),
+              AppTextField(label: 'Periode selesai', controller: periodEndController, hint: 'YYYY-MM-DD'),
+              const SizedBox(height: 16),
+              PrimaryButton(label: 'GENERATE DRAFT', onPressed: onGenerate),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        if (payrolls.isEmpty)
+          const EmptyState(message: 'Belum ada draft payroll.')
+        else
+          ...payrolls.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: AdminPayrollCard(item: item, onPublish: () => onPublish(item.id), onMarkPaid: () => onMarkPaid(item.id)))),
+      ],
+    );
+  }
+}
+
+class AdminPayrollCard extends StatelessWidget {
+  const AdminPayrollCard({super.key, required this.item, required this.onPublish, required this.onMarkPaid});
+  final Payroll item;
+  final VoidCallback onPublish;
+  final VoidCallback onMarkPaid;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.employeeName ?? 'Karyawan', style: sectionStyle()),
+          const SizedBox(height: 8),
+          Text('${shortDate(item.periodStart)} - ${shortDate(item.periodEnd)} · ${item.status}', style: captionStyle(weight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          MetricRow(label: 'Hari kerja', value: '${item.workingDays} hari'),
+          MetricRow(label: 'Net salary', value: rupiah(item.netSalary)),
+          const SizedBox(height: 12),
+          if (item.status == 'draft' || item.status == 'reviewed')
+            PrimaryButton(label: 'PUBLISH PAYSLIP', onPressed: onPublish)
+          else if (item.status == 'published')
+            PrimaryButton(label: 'MARK PAID', onPressed: onMarkPaid)
+          else
+            Text('✓ Paid', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminBottomNav extends StatelessWidget {
+  const AdminBottomNav({super.key, required this.tab, required this.onChanged});
+  final AdminTab tab;
+  final ValueChanged<AdminTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      height: 72,
+      selectedIndex: AdminTab.values.indexOf(tab),
+      onDestinationSelected: (index) => onChanged(AdminTab.values[index]),
+      destinations: const [
+        NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
+        NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Activity'),
+        NavigationDestination(icon: Icon(Icons.badge_outlined), label: 'Karyawan'),
+        NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Lembur'),
+        NavigationDestination(icon: Icon(Icons.payments_outlined), label: 'Payroll'),
+      ],
     );
   }
 }
@@ -1661,6 +2128,47 @@ class ApiClient {
     return AuthSession.fromJson(json);
   }
 
+  Future<AuthSession> registerAdmin({required String name, required String username, required String password}) async {
+    final json = await _request('POST', '/api/auth/register-admin', body: {'name': name, 'username': username, 'password': password});
+    return AuthSession.fromJson(json);
+  }
+
+  Future<AdminSummary> adminDashboard(String token) async {
+    final json = await _request('GET', '/api/admin/dashboard', token: token);
+    return AdminSummary.fromJson(json['summary'] as Map<String, dynamic>);
+  }
+
+  Future<List<EmployeeRecord>> employees(String token) async {
+    final json = await _request('GET', '/api/employees', token: token);
+    return (json['employees'] as List<dynamic>).map((item) => EmployeeRecord.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<Overtime>> pendingOvertime(String token) async {
+    final json = await _request('GET', '/api/overtime/pending', token: token);
+    return (json['overtime'] as List<dynamic>).map((item) => Overtime.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> reviewOvertime(String token, String id, String action) async {
+    await _request('POST', '/api/overtime/$id/review', token: token, body: {'action': action});
+  }
+
+  Future<List<Payroll>> payrolls(String token) async {
+    final json = await _request('GET', '/api/payroll', token: token);
+    return (json['payrolls'] as List<dynamic>).map((item) => Payroll.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> generatePayroll(String token, String periodStart, String periodEnd) async {
+    await _request('POST', '/api/payroll/generate', token: token, body: {'period_start': periodStart, 'period_end': periodEnd});
+  }
+
+  Future<void> publishPayroll(String token, String id) async {
+    await _request('POST', '/api/payroll/$id/publish', token: token);
+  }
+
+  Future<void> markPayrollPaid(String token, String id) async {
+    await _request('POST', '/api/payroll/$id/mark-paid', token: token);
+  }
+
   Future<Attendance?> todayAttendance(String token) async {
     final json = await _request('GET', '/api/attendance/today', token: token);
     final value = json['attendance'];
@@ -1728,6 +2236,34 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class AdminSummary {
+  AdminSummary({required this.masuk, required this.belumMasuk, required this.lembur, required this.pendingOvertime});
+  final int masuk;
+  final int belumMasuk;
+  final int lembur;
+  final int pendingOvertime;
+  factory AdminSummary.fromJson(Map<String, dynamic> json) => AdminSummary(
+        masuk: (json['masuk'] as num?)?.toInt() ?? 0,
+        belumMasuk: (json['belum_masuk'] as num?)?.toInt() ?? 0,
+        lembur: (json['lembur'] as num?)?.toInt() ?? 0,
+        pendingOvertime: (json['pending_overtime'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class EmployeeRecord {
+  EmployeeRecord({required this.id, required this.employeeCode, required this.name, required this.status});
+  final String id;
+  final String employeeCode;
+  final String name;
+  final String status;
+  factory EmployeeRecord.fromJson(Map<String, dynamic> json) => EmployeeRecord(
+        id: json['id'] as String,
+        employeeCode: json['employee_code'] as String,
+        name: json['name'] as String,
+        status: json['status'] as String,
+      );
+}
+
 class AuthSession {
   AuthSession({required this.token, required this.user});
   final String token;
@@ -1779,14 +2315,27 @@ class ActivityItem {
 }
 
 class Overtime {
-  Overtime({required this.id, required this.projectName, required this.description, required this.startTime, this.endTime, required this.status});
+  Overtime({required this.id, required this.projectName, required this.description, required this.startTime, this.endTime, required this.status, this.employeeName, this.durationMinutes = 0, this.amount = 0});
   final String id;
   final String projectName;
   final String description;
   final String startTime;
   final String? endTime;
   final String status;
-  factory Overtime.fromJson(Map<String, dynamic> json) => Overtime(id: json['id'] as String, projectName: json['project_name'] as String, description: json['description'] as String, startTime: json['start_time'] as String, endTime: json['end_time'] as String?, status: json['status'] as String);
+  final String? employeeName;
+  final int durationMinutes;
+  final int amount;
+  factory Overtime.fromJson(Map<String, dynamic> json) => Overtime(
+        id: json['id'] as String,
+        projectName: json['project_name'] as String,
+        description: json['description'] as String,
+        startTime: json['start_time'] as String,
+        endTime: json['end_time'] as String?,
+        status: json['status'] as String,
+        employeeName: json['employee_name'] as String?,
+        durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 0,
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class PayslipItem {
@@ -1797,7 +2346,8 @@ class PayslipItem {
 }
 
 class Payroll {
-  Payroll({required this.periodStart, required this.periodEnd, required this.workingDays, required this.normalSalary, required this.overtimeAmount, required this.cashbonDeduction, required this.netSalary, required this.status});
+  Payroll({required this.id, required this.periodStart, required this.periodEnd, required this.workingDays, required this.normalSalary, required this.overtimeAmount, required this.cashbonDeduction, required this.netSalary, required this.status, this.employeeName});
+  final String id;
   final String periodStart;
   final String periodEnd;
   final int workingDays;
@@ -1806,7 +2356,9 @@ class Payroll {
   final int cashbonDeduction;
   final int netSalary;
   final String status;
+  final String? employeeName;
   factory Payroll.fromJson(Map<String, dynamic> json) => Payroll(
+        id: json['id']?.toString() ?? '',
         periodStart: json['period_start'].toString().substring(0, 10),
         periodEnd: json['period_end'].toString().substring(0, 10),
         workingDays: (json['working_days'] as num).toInt(),
@@ -1815,6 +2367,7 @@ class Payroll {
         cashbonDeduction: (json['cashbon_deduction'] as num).toInt(),
         netSalary: (json['net_salary'] as num).toInt(),
         status: json['status'] as String,
+        employeeName: json['employee_name'] as String?,
       );
 }
 
@@ -1854,6 +2407,8 @@ String durationUntilNow(String iso) {
   final minutes = DateTime.now().difference(start).inMinutes;
   return durationLabel(minutes);
 }
+
+bool isDateInput(String value) => RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value) && DateTime.tryParse(value) != null;
 
 String fullDate(String date) {
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];

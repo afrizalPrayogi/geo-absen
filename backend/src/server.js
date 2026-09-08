@@ -352,6 +352,44 @@ route("POST", "/api/auth/register", async (req, res) => {
   send(res, 201, result);
 });
 
+route("POST", "/api/auth/register-admin", async (req, res) => {
+  const body = await readBody(req);
+  const name = String(body.name || "").trim();
+  const username = String(body.username || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  if (name.length < 3 || username.length < 3 || password.length < 6) {
+    return error(res, 422, "Nama, username, dan password wajib valid.");
+  }
+
+  const result = await tx(async (client) => {
+    const adminExists = await one("SELECT id FROM app_users WHERE role = 'admin' AND status = 'active' LIMIT 1", [], client);
+    if (adminExists) {
+      const err = new Error("Admin pertama sudah dibuat.");
+      err.status = 409;
+      throw err;
+    }
+    const usernameExists = await one("SELECT id FROM app_users WHERE LOWER(username) = $1", [username], client);
+    if (usernameExists) {
+      const err = new Error("Username sudah digunakan.");
+      err.status = 409;
+      throw err;
+    }
+    const user = await one(
+      `INSERT INTO app_users (id, name, username, password, role, employee_id, status)
+       VALUES ($1, $2, $3, $4, 'admin', NULL, 'active')
+       RETURNING id, name, username, role, employee_id, status`,
+      [randomUUID(), name, username, password],
+      client
+    );
+    const token = randomUUID();
+    await q("INSERT INTO sessions (token, user_id) VALUES ($1, $2)", [token, user.id], client);
+    await audit(user, "auth", user.id, "register_admin", null, publicUser(user), client);
+    return { token, user: publicUser(user) };
+  });
+
+  send(res, 201, result);
+});
+
 route("GET", "/api/auth/me", async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
