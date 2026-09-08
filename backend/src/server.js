@@ -1,5 +1,6 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
+import PDFDocument from "pdfkit";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -30,6 +31,18 @@ function send(res, status, body = {}) {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS"
   });
   res.end(JSON.stringify(body));
+}
+
+function sendPdf(res, buffer, fileName) {
+  res.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Length": buffer.length,
+    "Content-Disposition": `inline; filename="${fileName}"`,
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  });
+  res.end(buffer);
 }
 
 function error(res, status, message, details = undefined) {
@@ -210,6 +223,107 @@ function buildPayrollDocument(payroll, workDays, user) {
     })),
     text: lines.join("\n")
   };
+}
+
+function payrollDocumentFileName(payroll) {
+  const name = String(payroll.employee_name || "karyawan").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return `rincian-waktu-kerja-${name || "karyawan"}-${dateText(payroll.period_start)}-${dateText(payroll.period_end)}.pdf`;
+}
+
+function pdfBuffer(doc) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    doc.end();
+  });
+}
+
+async function buildPayrollPdf(payroll, workDays) {
+  const doc = new PDFDocument({ size: "A4", margin: 42, info: { Title: "Rincian Waktu Kerja", Author: "Geo Absen" } });
+  const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const left = doc.page.margins.left;
+  const right = doc.page.width - doc.page.margins.right;
+
+  doc.rect(0, 0, doc.page.width, 104).fill("#2F39A9");
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20).text("Rincian Waktu Kerja", left, 34);
+  doc.font("Helvetica").fontSize(10).text("Dokumen payroll berdasarkan data absensi aktual", left, 61);
+  doc.font("Helvetica-Bold").fontSize(12).text(payroll.employee_name, left, 78);
+  doc.font("Helvetica").fontSize(9).text(`Generated ${timeText(nowIso())}`, right - 120, 36, { width: 120, align: "right" });
+
+  let y = 130;
+  doc.fillColor("#101828").font("Helvetica-Bold").fontSize(11).text("Periode", left, y);
+  doc.font("Helvetica").text(`${dateText(payroll.period_start)} sampai ${dateText(payroll.period_end)}`, left + 86, y);
+  y += 22;
+  const summary = [
+    ["Hari kerja", `${workDays.length} hari`],
+    ["Total kerja", durationText(workDays.reduce((sum, item) => sum + Number(item.work_minutes || 0), 0))],
+    ["Lembur", `${durationText(payroll.overtime_minutes)} / ${rupiahText(payroll.overtime_amount)}`],
+    ["Total diterima", rupiahText(payroll.net_salary)]
+  ];
+  const boxGap = 10;
+  const boxWidth = (width - boxGap * 3) / 4;
+  summary.forEach(([label, value], index) => {
+    const x = left + index * (boxWidth + boxGap);
+    doc.roundedRect(x, y, boxWidth, 58, 12).fillAndStroke(index === 3 ? "#E9FBF7" : "#EFF6FB", index === 3 ? "#15D8B3" : "#D9DEE7");
+    doc.fillColor("#667085").font("Helvetica-Bold").fontSize(8).text(label.toUpperCase(), x + 10, y + 11, { width: boxWidth - 20 });
+    doc.fillColor(index === 3 ? "#0E987F" : "#2F39A9").font("Helvetica-Bold").fontSize(index === 3 ? 12 : 11).text(value, x + 10, y + 30, { width: boxWidth - 20 });
+  });
+  y += 86;
+
+  doc.fillColor("#101828").font("Helvetica-Bold").fontSize(13).text("Detail Absensi", left, y);
+  y += 22;
+  const columns = [
+    { label: "Tanggal", x: left, width: 66 },
+    { label: "Proyek", x: left + 70, width: 140 },
+    { label: "Masuk", x: left + 214, width: 42 },
+    { label: "Pulang", x: left + 260, width: 42 },
+    { label: "Kerja", x: left + 306, width: 54 },
+    { label: "Lembur", x: left + 364, width: 74 },
+    { label: "Nominal", x: left + 442, width: 70 }
+  ];
+  const drawHeader = () => {
+    doc.roundedRect(left, y, width, 24, 6).fill("#2E6FA0");
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8);
+    columns.forEach((col) => doc.text(col.label, col.x + 3, y + 8, { width: col.width }));
+    y += 28;
+  };
+  drawHeader();
+  doc.font("Helvetica").fontSize(8);
+  workDays.forEach((item, index) => {
+    if (y > 744) {
+      doc.addPage();
+      y = 42;
+      drawHeader();
+    }
+    const rowHeight = 34;
+    doc.rect(left, y - 3, width, rowHeight).fill(index % 2 === 0 ? "#FFFFFF" : "#F8FAFC");
+    doc.fillColor("#101828").font("Helvetica").fontSize(8);
+    doc.text(dateText(item.date), columns[0].x + 3, y + 5, { width: columns[0].width });
+    doc.text(String(item.project_name || "-"), columns[1].x + 3, y + 5, { width: columns[1].width, height: 22, ellipsis: true });
+    doc.text(timeText(item.check_in_time), columns[2].x + 3, y + 5, { width: columns[2].width });
+    doc.text(timeText(item.check_out_time), columns[3].x + 3, y + 5, { width: columns[3].width });
+    doc.text(durationText(item.work_minutes), columns[4].x + 3, y + 5, { width: columns[4].width });
+    doc.text(durationText(item.overtime_minutes), columns[5].x + 3, y + 5, { width: columns[5].width });
+    doc.text(rupiahText(item.overtime_amount), columns[6].x + 3, y + 5, { width: columns[6].width });
+    y += rowHeight;
+  });
+
+  y += 16;
+  if (y > 714) {
+    doc.addPage();
+    y = 42;
+  }
+  doc.roundedRect(left, y, width, 74, 12).fillAndStroke("#FFFFFF", "#D9DEE7");
+  doc.fillColor("#101828").font("Helvetica-Bold").fontSize(11).text("Ringkasan Payroll", left + 14, y + 13);
+  doc.font("Helvetica").fontSize(9);
+  doc.text(`Gaji normal: ${rupiahText(payroll.normal_salary)}`, left + 14, y + 34);
+  doc.text(`Potongan cashbon: -${rupiahText(payroll.cashbon_deduction)}`, left + 190, y + 34);
+  doc.fillColor("#0E987F").font("Helvetica-Bold").fontSize(13).text(`Total diterima: ${rupiahText(payroll.net_salary)}`, left + 360, y + 31, { width: 150, align: "right" });
+  doc.fillColor("#667085").font("Helvetica").fontSize(8).text("Dokumen ini dibuat otomatis dari data absen yang sudah check-out/corrected pada periode payroll.", left + 14, y + 56, { width: width - 28 });
+
+  return pdfBuffer(doc);
 }
 
 async function payrollWorkDays(payroll, client = pool) {
@@ -881,6 +995,18 @@ route("GET", "/api/payroll/:id/document", async (req, res, params) => {
   if (user.role === ROLE.EMPLOYEE && ![PAYROLL.PUBLISHED, PAYROLL.PAID].includes(payroll.status)) return error(res, 403, "Dokumen belum diterbitkan.");
   const workDays = await payrollWorkDays(payroll);
   send(res, 200, { document: buildPayrollDocument(payroll, workDays, user) });
+});
+
+route("GET", "/api/payroll/:id/document.pdf", async (req, res, params) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  const payroll = await one("SELECT * FROM payrolls WHERE id = $1", [params.id]);
+  if (!payroll) return error(res, 404, "Payroll tidak ditemukan.");
+  if (!canAccessEmployee(user, payroll.employee_id)) return error(res, 403, "Tidak boleh melihat dokumen payroll ini.");
+  if (user.role === ROLE.EMPLOYEE && ![PAYROLL.PUBLISHED, PAYROLL.PAID].includes(payroll.status)) return error(res, 403, "Dokumen belum diterbitkan.");
+  const workDays = await payrollWorkDays(payroll);
+  const pdf = await buildPayrollPdf(payroll, workDays);
+  sendPdf(res, pdf, payrollDocumentFileName(payroll));
 });
 
 route("PATCH", "/api/payroll/:id/cashbon-deduction", async (req, res, params) => {

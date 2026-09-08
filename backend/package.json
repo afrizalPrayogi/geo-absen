@@ -11,6 +11,7 @@
     "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
+    "pdfkit": "^0.20.2",
     "pg": "^8.16.3"
   },
   "engines": {

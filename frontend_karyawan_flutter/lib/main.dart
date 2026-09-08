@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:printing/printing.dart';
 
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -599,11 +600,11 @@ class _AdminShellState extends State<AdminShell> {
     setState(() => loading = true);
     try {
       final document =
-          await widget.api.payrollDocument(widget.session.token, id);
+          await widget.api.payrollDocumentPdf(widget.session.token, id);
       if (!mounted) return;
       setState(() => loading = false);
       await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => PayrollDocumentScreen(document: document)));
+          builder: (_) => PayrollPdfScreen(document: document)));
     } catch (err) {
       _snack(friendlyError(err));
     } finally {
@@ -1322,11 +1323,11 @@ class _EmployeeShellState extends State<EmployeeShell> {
     setState(() => loading = true);
     try {
       final document =
-          await widget.api.payrollDocument(widget.session.token, id);
+          await widget.api.payrollDocumentPdf(widget.session.token, id);
       if (!mounted) return;
       setState(() => loading = false);
       await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => PayrollDocumentScreen(document: document)));
+          builder: (_) => PayrollPdfScreen(document: document)));
     } catch (err) {
       _snack(friendlyError(err));
     } finally {
@@ -1832,13 +1833,12 @@ class _PayslipScreen extends StatelessWidget {
   }
 }
 
-class PayrollDocumentScreen extends StatelessWidget {
-  const PayrollDocumentScreen({super.key, required this.document});
-  final PayrollDocument document;
+class PayrollPdfScreen extends StatelessWidget {
+  const PayrollPdfScreen({super.key, required this.document});
+  final PayrollPdfFile document;
 
   @override
   Widget build(BuildContext context) {
-    final payroll = document.payroll;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -1854,130 +1854,29 @@ class PayrollDocumentScreen extends StatelessWidget {
                           color: AppColors.primary)),
                   Expanded(
                       child:
-                          Text('Dokumen waktu kerja', style: sectionStyle())),
+                          Text('Preview dokumen PDF', style: sectionStyle())),
+                  TextButton.icon(
+                    onPressed: () => Printing.sharePdf(
+                        bytes: document.bytes, filename: document.fileName),
+                    icon: const Icon(Icons.download_outlined, size: 18),
+                    label: const Text('Download'),
+                  ),
                 ],
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-                children: [
-                  AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(payroll.employeeName ?? 'Karyawan',
-                            style: titleStyle()),
-                        const SizedBox(height: 6),
-                        Text(
-                            '${shortDate(payroll.periodStart)} - ${shortDate(payroll.periodEnd)}',
-                            style: captionStyle(weight: FontWeight.w900)),
-                        const SizedBox(height: 14),
-                        MetricRow(
-                            label: 'Hari sesuai absen',
-                            value: '${document.workDays.length} hari'),
-                        MetricRow(
-                            label: 'Total kerja',
-                            value: durationLabel(document.workDays.fold<int>(
-                                0, (sum, item) => sum + item.workMinutes))),
-                        MetricRow(
-                            label: 'Lembur',
-                            value: rupiah(payroll.overtimeAmount)),
-                        const Divider(height: 26),
-                        MetricRow(
-                            label: 'TOTAL',
-                            value: rupiah(payroll.netSalary),
-                            large: true),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text('Rincian harian',
-                      style: bodyStyle(weight: FontWeight.w800)),
-                  const SizedBox(height: 10),
-                  if (document.workDays.isEmpty)
-                    const EmptyState(
-                        message: 'Tidak ada data absen pada periode ini.')
-                  else
-                    ...document.workDays.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: WorkDayCard(item: item),
-                        )),
-                  const SizedBox(height: 10),
-                  AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                                child: Text('Teks dokumen',
-                                    style: sectionStyle())),
-                            TextButton.icon(
-                              onPressed: () async {
-                                await Clipboard.setData(
-                                    ClipboardData(text: document.text));
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Dokumen dicopy.')));
-                                }
-                              },
-                              icon: const Icon(Icons.copy, size: 18),
-                              label: const Text('Copy'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SelectableText(document.text,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                height: 1.45,
-                                color: AppColors.primary,
-                                fontFamily: 'monospace')),
-                      ],
-                    ),
-                  ),
-                ],
+              child: PdfPreview(
+                build: (_) => document.bytes,
+                pdfFileName: document.fileName,
+                canChangeOrientation: false,
+                canChangePageFormat: false,
+                canDebug: false,
+                allowPrinting: false,
+                allowSharing: true,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class WorkDayCard extends StatelessWidget {
-  const WorkDayCard({super.key, required this.item});
-  final WorkDayDetail item;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(fullDate(item.date), style: sectionStyle()),
-          const SizedBox(height: 8),
-          Text('${timeOnly(item.checkInTime)} - ${timeOnly(item.checkOutTime)}',
-              style: sectionStyle()),
-          Text('Jam kerja ${durationLabel(item.workMinutes)}',
-              style: captionStyle(weight: FontWeight.w900)),
-          const SizedBox(height: 10),
-          Text(item.projectName, style: bodyStyle()),
-          if (item.overtimeMinutes > 0) ...[
-            const Divider(height: 22),
-            Text(
-                'Lembur ${timeOnly(item.overtimeStartTime)} - ${timeOnly(item.overtimeEndTime)}',
-                style: bodyStyle(weight: FontWeight.w900)),
-            Text(
-                '${durationLabel(item.overtimeMinutes)} · ${rupiah(item.overtimeAmount)}',
-                style: captionStyle(weight: FontWeight.w900)),
-            if (item.overtimeProjectName != null)
-              Text(item.overtimeProjectName!, style: captionStyle()),
-          ],
-        ],
       ),
     );
   }
@@ -2835,10 +2734,8 @@ class ApiClient {
     await _request('POST', '/api/payroll/$id/mark-paid', token: token);
   }
 
-  Future<PayrollDocument> payrollDocument(String token, String id) async {
-    final json =
-        await _request('GET', '/api/payroll/$id/document', token: token);
-    return PayrollDocument.fromJson(json['document'] as Map<String, dynamic>);
+  Future<PayrollPdfFile> payrollDocumentPdf(String token, String id) async {
+    return _requestBytes('GET', '/api/payroll/$id/document.pdf', token: token);
   }
 
   Future<Attendance?> todayAttendance(String token) async {
@@ -2938,6 +2835,32 @@ class ApiClient {
           'Terjadi kesalahan server.');
     }
     return decoded;
+  }
+
+  Future<PayrollPdfFile> _requestBytes(String method, String path,
+      {String? token}) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final headers = <String, String>{};
+    if (token != null) headers['Authorization'] = 'Bearer $token';
+
+    final response = await switch (method) {
+      'GET' =>
+        http.get(uri, headers: headers).timeout(const Duration(seconds: 10)),
+      _ => throw ApiException('Method tidak didukung.'),
+    };
+    if (response.statusCode >= 400) {
+      final decoded = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(decoded['error']?['message']?.toString() ??
+          'Terjadi kesalahan server.');
+    }
+    return PayrollPdfFile(
+      bytes: response.bodyBytes,
+      fileName:
+          fileNameFromDisposition(response.headers['content-disposition']) ??
+              'rincian-waktu-kerja.pdf',
+    );
   }
 }
 
@@ -3141,67 +3064,10 @@ class Payroll {
       );
 }
 
-class PayrollDocument {
-  PayrollDocument(
-      {required this.id,
-      required this.generatedAt,
-      required this.payroll,
-      required this.workDays,
-      required this.text});
-  final String id;
-  final String generatedAt;
-  final Payroll payroll;
-  final List<WorkDayDetail> workDays;
-  final String text;
-  factory PayrollDocument.fromJson(Map<String, dynamic> json) =>
-      PayrollDocument(
-        id: json['id'] as String,
-        generatedAt: json['generated_at'] as String,
-        payroll: Payroll.fromJson(json['payroll'] as Map<String, dynamic>),
-        workDays: (json['work_days'] as List<dynamic>)
-            .map((item) => WorkDayDetail.fromJson(item as Map<String, dynamic>))
-            .toList(),
-        text: json['text'] as String,
-      );
-}
-
-class WorkDayDetail {
-  WorkDayDetail(
-      {required this.date,
-      required this.projectName,
-      required this.checkInTime,
-      required this.checkOutTime,
-      required this.status,
-      required this.workMinutes,
-      required this.overtimeMinutes,
-      required this.overtimeAmount,
-      this.overtimeStartTime,
-      this.overtimeEndTime,
-      this.overtimeProjectName});
-  final String date;
-  final String projectName;
-  final String checkInTime;
-  final String? checkOutTime;
-  final String status;
-  final int workMinutes;
-  final int overtimeMinutes;
-  final int overtimeAmount;
-  final String? overtimeStartTime;
-  final String? overtimeEndTime;
-  final String? overtimeProjectName;
-  factory WorkDayDetail.fromJson(Map<String, dynamic> json) => WorkDayDetail(
-        date: json['date'].toString().substring(0, 10),
-        projectName: json['project_name'] as String,
-        checkInTime: json['check_in_time'] as String,
-        checkOutTime: json['check_out_time'] as String?,
-        status: json['status'] as String,
-        workMinutes: (json['work_minutes'] as num?)?.toInt() ?? 0,
-        overtimeMinutes: (json['overtime_minutes'] as num?)?.toInt() ?? 0,
-        overtimeAmount: (json['overtime_amount'] as num?)?.toInt() ?? 0,
-        overtimeStartTime: json['overtime_start_time'] as String?,
-        overtimeEndTime: json['overtime_end_time'] as String?,
-        overtimeProjectName: json['overtime_project_name'] as String?,
-      );
+class PayrollPdfFile {
+  PayrollPdfFile({required this.bytes, required this.fileName});
+  final Uint8List bytes;
+  final String fileName;
 }
 
 TextStyle titleStyle() => const TextStyle(
@@ -3324,6 +3190,12 @@ String rupiah(int value) {
       .toString()
       .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
   return 'Rp$text';
+}
+
+String? fileNameFromDisposition(String? value) {
+  if (value == null || value.isEmpty) return null;
+  final match = RegExp(r'filename="?([^";]+)"?').firstMatch(value);
+  return match?.group(1);
 }
 
 String friendlyError(Object err) {
