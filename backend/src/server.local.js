@@ -10,51 +10,18 @@ const minutesBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(
 const money = (value) => Math.round(Number(value || 0));
 
 const db = {
-  users: [
-    { id: "user-admin", name: "Admin", username: "admin", password: "password", role: ROLE.ADMIN, employee_id: null, status: "active" },
-    { id: "user-budi", name: "Budi Santoso", username: "budi", password: "password", role: ROLE.EMPLOYEE, employee_id: "emp-budi", status: "active" },
-    { id: "user-doni", name: "Doni Saputra", username: "doni", password: "password", role: ROLE.EMPLOYEE, employee_id: "emp-doni", status: "active" },
-    { id: "user-ahmad", name: "Ahmad", username: "ahmad", password: "password", role: ROLE.EMPLOYEE, employee_id: "emp-ahmad", status: "active" },
-    { id: "user-rudi", name: "Rudi", username: "rudi", password: "password", role: ROLE.EMPLOYEE, employee_id: "emp-rudi", status: "active" }
-  ],
+  users: [],
   sessions: new Map(),
-  employees: [
-    { id: "emp-budi", user_id: "user-budi", employee_code: "EMP-001", name: "Budi Santoso", status: "active" },
-    { id: "emp-doni", user_id: "user-doni", employee_code: "EMP-002", name: "Doni Saputra", status: "active" },
-    { id: "emp-ahmad", user_id: "user-ahmad", employee_code: "EMP-003", name: "Ahmad", status: "active" },
-    { id: "emp-rudi", user_id: "user-rudi", employee_code: "EMP-004", name: "Rudi", status: "active" }
-  ],
-  salaryRates: [
-    { id: "rate-budi", employee_id: "emp-budi", daily_rate: 150000, overtime_rate: 50000, effective_date: "2026-08-01" },
-    { id: "rate-doni", employee_id: "emp-doni", daily_rate: 200000, overtime_rate: 25000, effective_date: "2026-08-01" },
-    { id: "rate-ahmad", employee_id: "emp-ahmad", daily_rate: 160000, overtime_rate: 30000, effective_date: "2026-08-01" },
-    { id: "rate-rudi", employee_id: "emp-rudi", daily_rate: 140000, overtime_rate: 25000, effective_date: "2026-08-01" }
-  ],
-  attendance: seedAttendance(),
-  overtime: [
-    { id: "ot-doni-2026-09-01", employee_id: "emp-doni", attendance_id: "att-doni-2026-09-01", date: "2026-09-01", project_name: "Proyek Senayan", description: "Penyelesaian instalasi", photo: "photos/doni-overtime.jpg", latitude: -6.2261, longitude: 106.8018, start_time: "2026-09-01T11:05:00.000Z", end_time: "2026-09-01T13:05:00.000Z", duration_minutes: 120, rate: 25000, amount: 50000, status: "approved" },
-    { id: "ot-budi-2026-09-01", employee_id: "emp-budi", attendance_id: "att-budi-2026-09-01", date: "2026-09-01", project_name: "Apartemen Cempaka", description: "Penyelesaian instalasi", photo: "photos/budi-overtime.jpg", latitude: -6.2088, longitude: 106.8456, start_time: "2026-09-01T11:03:00.000Z", end_time: "2026-09-01T13:03:00.000Z", duration_minutes: 120, rate: 50000, amount: 100000, status: "completed" }
-  ],
-  cashbon: [{ id: "cashbon-budi-1", employee_id: "emp-budi", transaction_date: "2026-08-24", amount: 500000, description: "Cashbon", status: "approved", created_by: "user-admin", created_at: now() }],
-  cashbonDeductions: [{ id: "deduction-budi-prev", cashbon_id: "cashbon-budi-1", employee_id: "emp-budi", payroll_id: null, amount: 150000, created_by: "user-admin", created_at: "2026-08-18T10:00:00.000Z" }],
+  employees: [],
+  salaryRates: [],
+  attendance: [],
+  overtime: [],
+  cashbon: [],
+  cashbonDeductions: [],
   payrolls: [],
   payslips: [],
   auditLogs: []
 };
-
-function seedAttendance() {
-  const rows = [];
-  for (const [employeeId, project, lat, lon, prefix] of [
-    ["emp-budi", "Apartemen Cempaka", -6.2088, 106.8456, "budi"],
-    ["emp-doni", "Proyek Senayan", -6.2261, 106.8018, "doni"]
-  ]) {
-    for (const date of ["2026-08-26", "2026-08-27", "2026-08-28", "2026-08-29", "2026-08-31", "2026-09-01"]) {
-      rows.push({ id: `att-${prefix}-${date}`, employee_id: employeeId, date, project_name: project, check_in_time: `${date}T01:03:00.000Z`, check_in_latitude: lat, check_in_longitude: lon, check_in_photo: `photos/${prefix}-${date}.jpg`, check_out_time: `${date}T10:05:00.000Z`, notes: "", status: "completed", created_at: `${date}T01:03:00.000Z`, updated_at: `${date}T10:05:00.000Z` });
-    }
-  }
-  rows.push({ id: "att-ahmad-2026-09-02", employee_id: "emp-ahmad", date: "2026-09-02", project_name: "Gudang Cikarang", check_in_time: "2026-09-02T01:00:00.000Z", check_in_latitude: -6.261, check_in_longitude: 107.151, check_in_photo: "photos/ahmad.jpg", check_out_time: "2026-09-02T10:02:00.000Z", notes: "", status: "completed", created_at: "2026-09-02T01:00:00.000Z", updated_at: "2026-09-02T10:02:00.000Z" });
-  return rows;
-}
 
 function send(res, status, body = {}) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS" });

@@ -176,8 +176,8 @@ class _AuthScreenState extends State<AuthScreen> {
   bool loading = false;
   String? error;
   final nameController = TextEditingController();
-  final usernameController = TextEditingController(text: 'budi');
-  final passwordController = TextEditingController(text: 'password');
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -213,13 +213,8 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       mode = nextMode;
       error = null;
-      if (mode == AuthMode.login) {
-        usernameController.text = 'budi';
-        passwordController.text = 'password';
-      } else {
-        usernameController.clear();
-        passwordController.clear();
-      }
+      usernameController.clear();
+      passwordController.clear();
     });
   }
 
@@ -267,12 +262,12 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(height: 18),
                   if (!isLogin) ...[
-                    AuthField(label: 'Nama lengkap', controller: nameController, hint: 'Contoh: Andi Pratama'),
+                    AuthField(label: 'Nama lengkap', controller: nameController, hint: 'Isi nama lengkap'),
                     const SizedBox(height: 14),
                   ],
-                  AuthField(label: 'Username', controller: usernameController, hint: 'Minimal 3 karakter'),
+                  AuthField(label: 'Username', controller: usernameController, hint: 'Isi username'),
                   const SizedBox(height: 14),
-                  AuthField(label: 'Password', controller: passwordController, hint: 'Minimal 6 karakter', obscureText: true),
+                  AuthField(label: 'Password', controller: passwordController, hint: 'Isi password'),
                   if (error != null) ...[
                     const SizedBox(height: 14),
                     Text(error!, style: bodyStyle(color: AppColors.error, weight: FontWeight.w800)),
@@ -280,7 +275,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 20),
                   loading ? const Center(child: CircularProgressIndicator()) : PrimaryButton(label: isLogin ? 'MASUK' : 'REGISTER & MASUK', onPressed: _submit),
                   const SizedBox(height: 12),
-                  Text(isLogin ? 'Demo: budi / password' : 'Akun register tersimpan pada backend local-memory selama server hidup.', textAlign: TextAlign.center, style: captionStyle()),
+                  Text(isLogin ? 'Masukkan akun yang sudah terdaftar.' : 'Akun baru langsung aktif setelah registrasi.', textAlign: TextAlign.center, style: captionStyle()),
                 ],
               ),
             ),
@@ -362,9 +357,9 @@ class _EmployeeShellState extends State<EmployeeShell> {
   StreamSubscription<Position>? locationSubscription;
   XFile? checkInPhoto;
   XFile? overtimePhoto;
-  final projectController = TextEditingController(text: 'Proyek Apartemen Cempaka');
-  final overtimeProjectController = TextEditingController(text: 'Apartemen Cempaka');
-  final overtimeNoteController = TextEditingController(text: 'Penyelesaian instalasi');
+  final projectController = TextEditingController();
+  final overtimeProjectController = TextEditingController();
+  final overtimeNoteController = TextEditingController();
 
   @override
   void initState() {
@@ -697,7 +692,7 @@ class _TopAppBar extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(greeting, style: titleStyle()),
                 const SizedBox(height: 8),
-                Text('Rabu, 2 September 2026', style: captionStyle()),
+                Text(todayLabel(), style: captionStyle()),
               ],
             ),
           ),
@@ -759,7 +754,7 @@ class _HomeScreen extends StatelessWidget {
           const SizedBox(height: 24),
           LocationCard(value: currentGeoText, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
           const SizedBox(height: 22),
-          AppTextField(label: 'PROYEK / LOKASI KERJA', controller: projectController),
+          AppTextField(label: 'PROYEK / LOKASI KERJA', controller: projectController, hint: 'Isi nama/lokasi proyek'),
           const SizedBox(height: 22),
           PhotoUploadCard(photo: photo, onTap: onPickPhoto, label: 'BUKTI FOTO'),
           const SizedBox(height: 22),
@@ -779,7 +774,7 @@ class _HomeScreen extends StatelessWidget {
                 Text('● SEDANG BEKERJA', style: sectionStyle(color: AppColors.success)),
                 const SizedBox(height: 18),
                 MetricRow(label: 'Check-in', value: timeOnly(item.checkInTime)),
-                const MetricRow(label: 'Durasi', value: '04:16'),
+                MetricRow(label: 'Durasi', value: durationUntilNow(item.checkInTime)),
                 const SizedBox(height: 10),
                 Text(item.projectName, style: sectionStyle()),
               ],
@@ -822,7 +817,7 @@ class _AttendanceScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('September 2026', style: bodyStyle(weight: FontWeight.w800)),
+        Text('Riwayat attendance', style: bodyStyle(weight: FontWeight.w800)),
         const SizedBox(height: 16),
         if (items.isEmpty)
           const EmptyState(message: 'Belum ada riwayat attendance.')
@@ -849,6 +844,7 @@ class _ActivityScreen extends StatelessWidget {
         const SizedBox(height: 12),
         AppCard(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: items.map((item) => ActivityTile(item: item)).toList(),
           ),
         ),
@@ -896,7 +892,7 @@ class _OvertimeScreen extends StatelessWidget {
                 Text('● LEMBUR BERJALAN', style: sectionStyle(color: AppColors.success)),
                 const SizedBox(height: 18),
                 MetricRow(label: 'Mulai', value: timeOnly(active.startTime)),
-                const MetricRow(label: 'Durasi', value: '01:23:16'),
+                MetricRow(label: 'Durasi', value: durationUntilNow(active.startTime)),
                 const SizedBox(height: 10),
                 Text('Proyek', style: captionStyle()),
                 Text(active.projectName, style: sectionStyle()),
@@ -925,9 +921,9 @@ class _OvertimeScreen extends StatelessWidget {
         Text('Status kerja normal', style: bodyStyle()),
         Text('✓ Check-out ${timeOnly(attendance!.checkOutTime!)}', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
         const SizedBox(height: 22),
-        AppTextField(label: 'Proyek', controller: projectController),
+        AppTextField(label: 'Proyek', controller: projectController, hint: 'Isi nama/lokasi proyek'),
         const SizedBox(height: 18),
-        AppTextField(label: 'Keterangan', controller: noteController, maxLines: 3),
+        AppTextField(label: 'Keterangan', controller: noteController, hint: 'Isi keterangan lembur', maxLines: 3),
         const SizedBox(height: 18),
         LocationCard(value: currentGeoText, compact: true, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
         const SizedBox(height: 18),
@@ -1316,9 +1312,10 @@ class PhotoThumb extends StatelessWidget {
 }
 
 class AppTextField extends StatelessWidget {
-  const AppTextField({super.key, required this.label, required this.controller, this.maxLines = 1});
+  const AppTextField({super.key, required this.label, required this.controller, this.hint, this.maxLines = 1});
   final String label;
   final TextEditingController controller;
+  final String? hint;
   final int maxLines;
 
   @override
@@ -1329,7 +1326,7 @@ class AppTextField extends StatelessWidget {
         controller: controller,
         maxLines: maxLines,
         minLines: maxLines,
-        decoration: inputDecoration(null),
+        decoration: inputDecoration(hint),
       ),
     );
   }
@@ -1338,7 +1335,7 @@ class AppTextField extends StatelessWidget {
 InputDecoration inputDecoration(String? hint) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: captionStyle(),
+    hintStyle: captionStyle().copyWith(color: AppColors.muted.withValues(alpha: 0.56)),
     filled: true,
     fillColor: Colors.white,
     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1472,6 +1469,7 @@ class ActivityTile extends StatelessWidget {
       _ => 'Belum masuk',
     };
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Column(
@@ -1829,6 +1827,13 @@ TextStyle moneyStyle() => const TextStyle(fontSize: 28, fontWeight: FontWeight.w
 String firstName(String name) => name.split(' ').first;
 String initials(String name) => name.split(' ').where((part) => part.isNotEmpty).map((part) => part[0]).take(2).join().toUpperCase();
 String _timeLabel() => '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+String todayLabel() {
+  const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  final value = DateTime.now();
+  return '${days[value.weekday - 1]}, ${value.day} ${months[value.month - 1]} ${value.year}';
+}
+
 String timeOnly(String? iso) {
   if (iso == null || iso.isEmpty) return '-';
   final date = DateTime.tryParse(iso)?.toLocal();
@@ -1841,6 +1846,13 @@ String durationLabel(int minutes) {
   final hours = minutes ~/ 60;
   final mins = minutes % 60;
   return '${hours}j ${mins.toString().padLeft(2, '0')}m';
+}
+
+String durationUntilNow(String iso) {
+  final start = DateTime.tryParse(iso)?.toLocal();
+  if (start == null) return '-';
+  final minutes = DateTime.now().difference(start).inMinutes;
+  return durationLabel(minutes);
 }
 
 String fullDate(String date) {

@@ -2,7 +2,7 @@
 
 Backend MVP untuk PRD `Sistem Absensi, Lembur, Cashbon & Payroll Proyek`.
 
-Backend sekarang memakai PostgreSQL melalui dependency `pg`. Data utama tidak lagi `in-memory`; tabel dibuat dari `db/schema.sql` dan data dummy dari `db/seed.sql`.
+Backend sekarang memakai PostgreSQL melalui dependency `pg`. Tabel dibuat dari `db/schema.sql`; `db/seed.sql` tidak memasukkan data awal.
 
 ## Setup PostgreSQL
 
@@ -38,26 +38,26 @@ postgres://postgres:postgres@localhost:5432/attendance_payroll
 - `npm run start:local` menjalankan API server lokal tanpa PostgreSQL untuk demo cepat.
 - `npm run check` validasi sintaks JavaScript.
 - `npm run db:create` membuat database `attendance_payroll` jika belum ada.
-- `npm run db:init` membuat schema dan memasukkan seed dummy.
+- `npm run db:init` membuat schema database.
 
-## Akun Dummy
+## Registrasi dan Login
 
-Semua password dummy: `password`.
+Data awal dikosongkan. Buat akun karyawan dari aplikasi mobile atau endpoint register.
 
-| Username | Role | Employee |
-|---|---|---|
-| `admin` | admin | - |
-| `budi` | employee | Budi Santoso |
-| `doni` | employee | Doni Saputra |
-| `ahmad` | employee | Ahmad |
-| `rudi` | employee | Rudi |
+Register:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Nama Karyawan","username":"username","password":"passwordku"}'
+```
 
 Login:
 
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password"}'
+  -d '{"username":"username","password":"passwordku"}'
 ```
 
 Gunakan response `token` sebagai header:
@@ -85,6 +85,7 @@ Authorization: Bearer <token>
 ### Auth
 
 - `POST /api/auth/login`
+- `POST /api/auth/register`
 - `GET /api/auth/me`
 
 ### Employee dan Salary Rate
@@ -123,7 +124,7 @@ Overtime hanya bisa dimulai setelah attendance normal sudah `completed`.
 
 ### Cashbon
 
-- `GET /api/cashbon?employee_id=emp-budi`
+- `GET /api/cashbon?employee_id=<employee_id>`
 - `POST /api/cashbon` admin
 - `GET /api/cashbon/:employeeId/balance`
 
@@ -170,17 +171,9 @@ Employee hanya bisa melihat payslip setelah payroll `published` atau `paid`.
 6. Publish satu payroll atau publish periode.
 7. Mark as paid setelah pembayaran manual selesai.
 
-Seed Budi disiapkan agar contoh PRD menghasilkan:
-
-- 6 hari kerja
-- Gaji normal Rp900.000
-- Lembur Rp100.000 setelah approved
-- Cashbon deduction Rp150.000
-- Netto Rp850.000
-
 ## Catatan Implementasi MVP
 
 - Password masih plain text untuk scaffold lokal; production harus memakai hashing.
-- File foto belum disimpan sebagai object storage; field `photo` menerima path/url/base64 dummy.
+- File foto belum disimpan sebagai object storage; field `photo` menerima path/url/base64 dari client.
 - Role permission sudah divalidasi di backend, bukan hanya UI.
 - Published payroll tidak bisa dikoreksi langsung tanpa mekanisme reopen/adjustment khusus.
