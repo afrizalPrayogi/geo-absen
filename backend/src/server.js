@@ -14,6 +14,7 @@ const OVERTIME = Object.freeze({ RUNNING: "running", COMPLETED: "completed", APP
 const PAYROLL = Object.freeze({ DRAFT: "draft", REVIEWED: "reviewed", PUBLISHED: "published", PAID: "paid" });
 
 const jakartaDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
+const jakartaTimeFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hour12: false });
 const today = () => jakartaDateFormatter.format(new Date());
 const nowIso = () => new Date().toISOString();
 const moneyRound = (value) => Math.round(Number(value || 0));
@@ -156,6 +157,87 @@ function payrollDto(row, user) {
   return result;
 }
 
+function dateText(value) {
+  if (!value) return "-";
+  if (typeof value === "string") return value.slice(0, 10);
+  return jakartaDateFormatter.format(new Date(value));
+}
+
+function timeText(value) {
+  if (!value) return "-";
+  return jakartaTimeFormatter.format(new Date(value));
+}
+
+function durationText(minutes) {
+  const value = Number(minutes || 0);
+  if (value <= 0) return "-";
+  return `${Math.floor(value / 60)}j ${String(value % 60).padStart(2, "0")}m`;
+}
+
+function rupiahText(value) {
+  return `Rp${String(Math.round(Number(value || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+}
+
+function buildPayrollDocument(payroll, workDays, user) {
+  const safePayroll = payrollDto(payroll, user);
+  const lines = [
+    "DOKUMEN RINCIAN WAKTU KERJA",
+    `Karyawan: ${payroll.employee_name}`,
+    `Periode: ${dateText(payroll.period_start)} sampai ${dateText(payroll.period_end)}`,
+    `Jumlah hari kerja: ${workDays.length} hari`,
+    `Total gaji normal: ${rupiahText(payroll.normal_salary)}`,
+    `Total lembur: ${rupiahText(payroll.overtime_amount)} (${durationText(payroll.overtime_minutes)})`,
+    `Total diterima: ${rupiahText(payroll.net_salary)}`,
+    "",
+    "Rincian harian:",
+    "No | Tanggal | Proyek | Masuk | Pulang | Jam kerja | Lembur"
+  ];
+  workDays.forEach((item, index) => {
+    const overtime = Number(item.overtime_minutes || 0) > 0 ? `${durationText(item.overtime_minutes)} / ${rupiahText(item.overtime_amount)}` : "-";
+    lines.push(`${index + 1} | ${dateText(item.date)} | ${item.project_name} | ${timeText(item.check_in_time)} | ${timeText(item.check_out_time)} | ${durationText(item.work_minutes)} | ${overtime}`);
+  });
+  return {
+    id: `doc-${payroll.id}`,
+    type: "payroll_work_detail",
+    generated_at: nowIso(),
+    payroll: safePayroll,
+    work_days: workDays.map((item) => ({
+      ...item,
+      date: dateText(item.date),
+      work_minutes: Number(item.work_minutes || 0),
+      overtime_minutes: Number(item.overtime_minutes || 0),
+      overtime_amount: Number(item.overtime_amount || 0)
+    })),
+    text: lines.join("\n")
+  };
+}
+
+async function payrollWorkDays(payroll, client = pool) {
+  return many(
+    `SELECT a.id, a.date::text AS date, a.project_name, a.check_in_time, a.check_out_time, a.status,
+            GREATEST(0, ROUND(EXTRACT(EPOCH FROM (COALESCE(a.check_out_time, a.check_in_time) - a.check_in_time)) / 60))::int AS work_minutes,
+            COALESCE(ot.overtime_minutes, 0)::int AS overtime_minutes,
+            COALESCE(ot.overtime_amount, 0)::int AS overtime_amount,
+            ot.overtime_start_time,
+            ot.overtime_end_time,
+            ot.overtime_project_name
+     FROM attendance a
+     LEFT JOIN (
+       SELECT employee_id, date, SUM(duration_minutes)::int AS overtime_minutes, SUM(amount)::int AS overtime_amount,
+              MIN(start_time) AS overtime_start_time, MAX(end_time) AS overtime_end_time, STRING_AGG(DISTINCT project_name, ', ') AS overtime_project_name
+       FROM overtime
+       WHERE status IN ('approved', 'corrected')
+       GROUP BY employee_id, date
+     ) ot ON ot.employee_id = a.employee_id AND ot.date = a.date
+     WHERE a.employee_id = $1
+       AND a.date BETWEEN $2::date AND $3::date
+       AND a.status IN ('completed', 'corrected')
+     ORDER BY a.date`,
+    [payroll.employee_id, payroll.period_start, payroll.period_end],
+    client
+  );
+}
+
 async function latestSalaryRate(employeeId, atDate = today(), client = pool) {
   return one(
     `SELECT * FROM salary_rates
@@ -238,7 +320,7 @@ async function payrollCalculation(employee, periodStart, periodEnd, deductionAmo
      FROM overtime
      WHERE employee_id = $1
        AND date BETWEEN $2::date AND $3::date
-       AND status = 'approved'`,
+       AND status IN ('approved', 'corrected')`,
     [employee.id, periodStart, periodEnd],
     client
   );
@@ -788,6 +870,17 @@ route("GET", "/api/payroll/:id", async (req, res, params) => {
   if (!canAccessEmployee(user, payroll.employee_id)) return error(res, 403, "Tidak boleh melihat payroll ini.");
   if (user.role === ROLE.EMPLOYEE && ![PAYROLL.PUBLISHED, PAYROLL.PAID].includes(payroll.status)) return error(res, 403, "Payslip belum diterbitkan.");
   send(res, 200, { payroll: payrollDto(payroll, user) });
+});
+
+route("GET", "/api/payroll/:id/document", async (req, res, params) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  const payroll = await one("SELECT * FROM payrolls WHERE id = $1", [params.id]);
+  if (!payroll) return error(res, 404, "Payroll tidak ditemukan.");
+  if (!canAccessEmployee(user, payroll.employee_id)) return error(res, 403, "Tidak boleh melihat dokumen payroll ini.");
+  if (user.role === ROLE.EMPLOYEE && ![PAYROLL.PUBLISHED, PAYROLL.PAID].includes(payroll.status)) return error(res, 403, "Dokumen belum diterbitkan.");
+  const workDays = await payrollWorkDays(payroll);
+  send(res, 200, { document: buildPayrollDocument(payroll, workDays, user) });
 });
 
 route("PATCH", "/api/payroll/:id/cashbon-deduction", async (req, res, params) => {

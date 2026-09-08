@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -37,11 +38,19 @@ class EmployeeApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         navigationBarTheme: NavigationBarThemeData(
           indicatorColor: AppColors.accent.withValues(alpha: 0.18),
-          labelTextStyle: WidgetStateProperty.all(captionStyle(weight: FontWeight.w900)),
-          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.muted)),
+          labelTextStyle:
+              WidgetStateProperty.all(captionStyle(weight: FontWeight.w900)),
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primary
+                  : AppColors.muted)),
         ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.mint, linearTrackColor: AppColors.line),
-        snackBarTheme: const SnackBarThemeData(backgroundColor: AppColors.primary, contentTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+            color: AppColors.mint, linearTrackColor: AppColors.line),
+        snackBarTheme: const SnackBarThemeData(
+            backgroundColor: AppColors.primary,
+            contentTextStyle:
+                TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
         useMaterial3: true,
         fontFamily: 'Arial',
       ),
@@ -143,16 +152,42 @@ class SplashScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(28),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 28, offset: const Offset(0, 14))],
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 28,
+                            offset: const Offset(0, 14))
+                      ],
                     ),
-                    child: const Center(child: Text('AP', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: AppColors.primary, letterSpacing: -1.4))),
+                    child: const Center(
+                        child: Text('AP',
+                            style: TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                                letterSpacing: -1.4))),
                   ),
                   const SizedBox(height: 22),
-                  const Text('Absensi Proyek', textAlign: TextAlign.center, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.8)),
+                  const Text('Absensi Proyek',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.8)),
                   const SizedBox(height: 8),
-                  Text('Absensi, lembur, dan payslip dalam satu aplikasi.', textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.86), fontWeight: FontWeight.w700)),
+                  Text('Absensi, lembur, dan payslip dalam satu aplikasi.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.white.withValues(alpha: 0.86),
+                          fontWeight: FontWeight.w700)),
                   const SizedBox(height: 30),
-                  const SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.mint)),
+                  const SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 3, color: AppColors.mint)),
                 ],
               ),
             ),
@@ -164,10 +199,12 @@ class SplashScreen extends StatelessWidget {
 }
 
 enum AuthMode { login, register }
+
 enum RegisterRole { employee, admin }
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, required this.api, required this.onAuthenticated});
+  const AuthScreen(
+      {super.key, required this.api, required this.onAuthenticated});
   final ApiClient api;
   final ValueChanged<AuthSession> onAuthenticated;
 
@@ -196,8 +233,12 @@ class _AuthScreenState extends State<AuthScreen> {
     final name = nameController.text.trim();
     final username = usernameController.text.trim();
     final password = passwordController.text;
-    if (username.length < 3 || password.length < 6 || (mode == AuthMode.register && name.length < 3)) {
-      setState(() => error = mode == AuthMode.login ? 'Username dan password wajib valid.' : 'Nama, username, dan password wajib valid.');
+    if (username.length < 3 ||
+        password.length < 6 ||
+        (mode == AuthMode.register && name.length < 3)) {
+      setState(() => error = mode == AuthMode.login
+          ? 'Username dan password wajib valid.'
+          : 'Nama, username, dan password wajib valid.');
       return;
     }
     setState(() {
@@ -208,8 +249,10 @@ class _AuthScreenState extends State<AuthScreen> {
       final nextSession = mode == AuthMode.login
           ? await widget.api.login(username, password)
           : registerRole == RegisterRole.admin
-              ? await widget.api.registerAdmin(name: name, username: username, password: password)
-              : await widget.api.register(name: name, username: username, password: password);
+              ? await widget.api.registerAdmin(
+                  name: name, username: username, password: password)
+              : await widget.api
+                  .register(name: name, username: username, password: password);
       widget.onAuthenticated(nextSession);
     } catch (err) {
       setState(() => error = friendlyError(err));
@@ -238,7 +281,10 @@ class _AuthScreenState extends State<AuthScreen> {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppColors.primary, AppColors.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Column(
@@ -247,13 +293,34 @@ class _AuthScreenState extends State<AuthScreen> {
                   Container(
                     width: 58,
                     height: 58,
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                    child: const Center(child: Text('AP', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.primary))),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18)),
+                    child: const Center(
+                        child: Text('AP',
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary))),
                   ),
                   const SizedBox(height: 26),
-                  Text(isLogin ? 'Masuk ke akun karyawan' : 'Daftarkan karyawan baru', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.8)),
+                  Text(
+                      isLogin
+                          ? 'Masuk ke akun karyawan'
+                          : 'Daftarkan karyawan baru',
+                      style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.8)),
                   const SizedBox(height: 8),
-                  Text(isLogin ? 'Gunakan akun karyawan untuk membuka dashboard.' : 'Buat akun, lalu langsung masuk ke dashboard.', style: TextStyle(color: Colors.white.withValues(alpha: 0.84), fontWeight: FontWeight.w700)),
+                  Text(
+                      isLogin
+                          ? 'Gunakan akun karyawan untuk membuka dashboard.'
+                          : 'Buat akun, lalu langsung masuk ke dashboard.',
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.84),
+                          fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -264,35 +331,75 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: AuthToggle(label: 'Login', selected: isLogin, onTap: () => _switchMode(AuthMode.login))),
+                      Expanded(
+                          child: AuthToggle(
+                              label: 'Login',
+                              selected: isLogin,
+                              onTap: () => _switchMode(AuthMode.login))),
                       const SizedBox(width: 10),
-                      Expanded(child: AuthToggle(label: 'Register', selected: !isLogin, onTap: () => _switchMode(AuthMode.register))),
+                      Expanded(
+                          child: AuthToggle(
+                              label: 'Register',
+                              selected: !isLogin,
+                              onTap: () => _switchMode(AuthMode.register))),
                     ],
                   ),
                   const SizedBox(height: 18),
                   if (!isLogin) ...[
-                    AuthField(label: 'Nama lengkap', controller: nameController, hint: 'Isi nama lengkap'),
+                    AuthField(
+                        label: 'Nama lengkap',
+                        controller: nameController,
+                        hint: 'Isi nama lengkap'),
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(child: AuthToggle(label: 'Karyawan', selected: registerRole == RegisterRole.employee, onTap: () => setState(() => registerRole = RegisterRole.employee))),
+                        Expanded(
+                            child: AuthToggle(
+                                label: 'Karyawan',
+                                selected: registerRole == RegisterRole.employee,
+                                onTap: () => setState(() =>
+                                    registerRole = RegisterRole.employee))),
                         const SizedBox(width: 10),
-                        Expanded(child: AuthToggle(label: 'Admin pertama', selected: registerRole == RegisterRole.admin, onTap: () => setState(() => registerRole = RegisterRole.admin))),
+                        Expanded(
+                            child: AuthToggle(
+                                label: 'Admin pertama',
+                                selected: registerRole == RegisterRole.admin,
+                                onTap: () => setState(
+                                    () => registerRole = RegisterRole.admin))),
                       ],
                     ),
                     const SizedBox(height: 14),
                   ],
-                  AuthField(label: 'Username', controller: usernameController, hint: 'Isi username'),
+                  AuthField(
+                      label: 'Username',
+                      controller: usernameController,
+                      hint: 'Isi username'),
                   const SizedBox(height: 14),
-                  AuthField(label: 'Password', controller: passwordController, hint: 'Isi password'),
+                  AuthField(
+                      label: 'Password',
+                      controller: passwordController,
+                      hint: 'Isi password'),
                   if (error != null) ...[
                     const SizedBox(height: 14),
-                    Text(error!, style: bodyStyle(color: AppColors.error, weight: FontWeight.w800)),
+                    Text(error!,
+                        style: bodyStyle(
+                            color: AppColors.error, weight: FontWeight.w800)),
                   ],
                   const SizedBox(height: 20),
-                  loading ? const Center(child: CircularProgressIndicator()) : PrimaryButton(label: isLogin ? 'MASUK' : 'REGISTER & MASUK', onPressed: _submit),
+                  loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : PrimaryButton(
+                          label: isLogin ? 'MASUK' : 'REGISTER & MASUK',
+                          onPressed: _submit),
                   const SizedBox(height: 12),
-                  Text(isLogin ? 'Masukkan akun yang sudah terdaftar.' : registerRole == RegisterRole.admin ? 'Admin pertama hanya bisa dibuat satu kali.' : 'Akun karyawan langsung aktif setelah registrasi.', textAlign: TextAlign.center, style: captionStyle()),
+                  Text(
+                      isLogin
+                          ? 'Masukkan akun yang sudah terdaftar.'
+                          : registerRole == RegisterRole.admin
+                              ? 'Admin pertama hanya bisa dibuat satu kali.'
+                              : 'Akun karyawan langsung aktif setelah registrasi.',
+                      textAlign: TextAlign.center,
+                      style: captionStyle()),
                 ],
               ),
             ),
@@ -304,7 +411,11 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 class AuthToggle extends StatelessWidget {
-  const AuthToggle({super.key, required this.label, required this.selected, required this.onTap});
+  const AuthToggle(
+      {super.key,
+      required this.label,
+      required this.selected,
+      required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -320,16 +431,25 @@ class AuthToggle extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : AppColors.soft,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? AppColors.primary : AppColors.line),
+          border:
+              Border.all(color: selected ? AppColors.primary : AppColors.line),
         ),
-        child: Text(label, style: TextStyle(color: selected ? Colors.white : AppColors.secondary, fontWeight: FontWeight.w900)),
+        child: Text(label,
+            style: TextStyle(
+                color: selected ? Colors.white : AppColors.secondary,
+                fontWeight: FontWeight.w900)),
       ),
     );
   }
 }
 
 class AuthField extends StatelessWidget {
-  const AuthField({super.key, required this.label, required this.controller, required this.hint, this.obscureText = false});
+  const AuthField(
+      {super.key,
+      required this.label,
+      required this.controller,
+      required this.hint,
+      this.obscureText = false});
   final String label;
   final TextEditingController controller;
   final String hint;
@@ -351,7 +471,11 @@ class AuthField extends StatelessWidget {
 enum AdminTab { dashboard, activity, employees, overtime, payroll }
 
 class AdminShell extends StatefulWidget {
-  const AdminShell({super.key, required this.api, required this.session, required this.onLogout});
+  const AdminShell(
+      {super.key,
+      required this.api,
+      required this.session,
+      required this.onLogout});
 
   final ApiClient api;
   final AuthSession session;
@@ -471,18 +595,41 @@ class _AdminShellState extends State<AdminShell> {
     }
   }
 
+  Future<void> _openPayrollDocument(String id) async {
+    setState(() => loading = true);
+    try {
+      final document =
+          await widget.api.payrollDocument(widget.session.token, id);
+      if (!mounted) return;
+      setState(() => loading = false);
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => PayrollDocumentScreen(document: document)));
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
   }
 
   @override
   Widget build(BuildContext context) {
     final content = switch (tab) {
-      AdminTab.dashboard => AdminDashboardScreen(summary: summary, pendingOvertime: pendingOvertime.length, onRefresh: _loadData),
+      AdminTab.dashboard => AdminDashboardScreen(
+          summary: summary,
+          pendingOvertime: pendingOvertime.length,
+          onRefresh: _loadData),
       AdminTab.activity => AdminActivityScreen(items: activity),
       AdminTab.employees => AdminEmployeesScreen(items: employees),
-      AdminTab.overtime => AdminOvertimeScreen(items: pendingOvertime, onApprove: (id) => _reviewOvertime(id, 'approve'), onReject: (id) => _reviewOvertime(id, 'reject')),
+      AdminTab.overtime => AdminOvertimeScreen(
+          items: pendingOvertime,
+          onApprove: (id) => _reviewOvertime(id, 'approve'),
+          onReject: (id) => _reviewOvertime(id, 'reject')),
       AdminTab.payroll => AdminPayrollScreen(
           payrolls: payrolls,
           periodStartController: periodStartController,
@@ -490,6 +637,7 @@ class _AdminShellState extends State<AdminShell> {
           onGenerate: _generatePayroll,
           onPublish: _publishPayroll,
           onMarkPaid: _markPaid,
+          onOpenDocument: _openPayrollDocument,
         ),
     };
 
@@ -497,7 +645,8 @@ class _AdminShellState extends State<AdminShell> {
       body: SafeArea(
         child: Column(
           children: [
-            AdminTopAppBar(user: widget.session.user, tab: tab, onLogout: widget.onLogout),
+            AdminTopAppBar(
+                user: widget.session.user, tab: tab, onLogout: widget.onLogout),
             if (loading) const LinearProgressIndicator(minHeight: 2),
             if (error != null) ErrorBanner(message: error!, onRetry: _loadData),
             Expanded(
@@ -512,13 +661,18 @@ class _AdminShellState extends State<AdminShell> {
           ],
         ),
       ),
-      bottomNavigationBar: AdminBottomNav(tab: tab, onChanged: (nextTab) => setState(() => tab = nextTab)),
+      bottomNavigationBar: AdminBottomNav(
+          tab: tab, onChanged: (nextTab) => setState(() => tab = nextTab)),
     );
   }
 }
 
 class AdminTopAppBar extends StatelessWidget {
-  const AdminTopAppBar({super.key, required this.user, required this.tab, required this.onLogout});
+  const AdminTopAppBar(
+      {super.key,
+      required this.user,
+      required this.tab,
+      required this.onLogout});
   final AppUser user;
   final AdminTab tab;
   final VoidCallback onLogout;
@@ -534,7 +688,9 @@ class AdminTopAppBar extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
-      decoration: const BoxDecoration(color: AppColors.card, border: Border(bottom: BorderSide(color: AppColors.line))),
+      decoration: const BoxDecoration(
+          color: AppColors.card,
+          border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Row(
         children: [
           Expanded(
@@ -549,7 +705,10 @@ class AdminTopAppBar extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(onPressed: onLogout, icon: const Icon(Icons.logout_outlined, color: AppColors.primary)),
+          IconButton(
+              onPressed: onLogout,
+              icon:
+                  const Icon(Icons.logout_outlined, color: AppColors.primary)),
         ],
       ),
     );
@@ -557,7 +716,11 @@ class AdminTopAppBar extends StatelessWidget {
 }
 
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key, required this.summary, required this.pendingOvertime, required this.onRefresh});
+  const AdminDashboardScreen(
+      {super.key,
+      required this.summary,
+      required this.pendingOvertime,
+      required this.onRefresh});
   final AdminSummary? summary;
   final int pendingOvertime;
   final VoidCallback onRefresh;
@@ -565,7 +728,9 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = summary;
-    if (data == null) return const EmptyState(message: 'Dashboard admin belum tersedia.');
+    if (data == null) {
+      return const EmptyState(message: 'Dashboard admin belum tersedia.');
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -575,9 +740,33 @@ class AdminDashboardScreen extends StatelessWidget {
             children: [
               Text('Ringkasan hari ini', style: sectionStyle()),
               const SizedBox(height: 14),
-              Row(children: [Expanded(child: AdminMetric(label: 'Masuk', value: '${data.masuk}', color: AppColors.success)), const SizedBox(width: 10), Expanded(child: AdminMetric(label: 'Belum', value: '${data.belumMasuk}', color: AppColors.warning))]),
+              Row(children: [
+                Expanded(
+                    child: AdminMetric(
+                        label: 'Masuk',
+                        value: '${data.masuk}',
+                        color: AppColors.success)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: AdminMetric(
+                        label: 'Belum',
+                        value: '${data.belumMasuk}',
+                        color: AppColors.warning))
+              ]),
               const SizedBox(height: 10),
-              Row(children: [Expanded(child: AdminMetric(label: 'Lembur', value: '${data.lembur}', color: AppColors.accent)), const SizedBox(width: 10), Expanded(child: AdminMetric(label: 'Review', value: '$pendingOvertime', color: AppColors.primary))]),
+              Row(children: [
+                Expanded(
+                    child: AdminMetric(
+                        label: 'Lembur',
+                        value: '${data.lembur}',
+                        color: AppColors.accent)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: AdminMetric(
+                        label: 'Review',
+                        value: '$pendingOvertime',
+                        color: AppColors.primary))
+              ]),
             ],
           ),
         ),
@@ -589,7 +778,11 @@ class AdminDashboardScreen extends StatelessWidget {
 }
 
 class AdminMetric extends StatelessWidget {
-  const AdminMetric({super.key, required this.label, required this.value, required this.color});
+  const AdminMetric(
+      {super.key,
+      required this.label,
+      required this.value,
+      required this.color});
   final String label;
   final String value;
   final Color color;
@@ -598,11 +791,19 @@ class AdminMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(18), border: Border.all(color: color.withValues(alpha: 0.2))),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color.withValues(alpha: 0.2))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.8)),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                  letterSpacing: -0.8)),
           const SizedBox(height: 4),
           Text(label, style: captionStyle(weight: FontWeight.w900)),
         ],
@@ -617,7 +818,11 @@ class AdminActivityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const EmptyState(message: 'Belum ada karyawan aktif. Data akan muncul setelah karyawan register atau check-in.');
+    if (items.isEmpty) {
+      return const EmptyState(
+          message:
+              'Belum ada karyawan aktif. Data akan muncul setelah karyawan register atau check-in.');
+    }
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,10 +838,18 @@ class AdminEmployeesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const EmptyState(message: 'Belum ada karyawan. Minta karyawan register dari aplikasi mobile.');
+    if (items.isEmpty) {
+      return const EmptyState(
+          message:
+              'Belum ada karyawan. Minta karyawan register dari aplikasi mobile.');
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: items.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: EmployeeCard(item: item))).toList(),
+      children: items
+          .map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: EmployeeCard(item: item)))
+          .toList(),
     );
   }
 }
@@ -653,7 +866,8 @@ class EmployeeCard extends StatelessWidget {
         children: [
           Text(item.name, style: sectionStyle()),
           const SizedBox(height: 6),
-          Text('${item.employeeCode} · ${item.status}', style: captionStyle(weight: FontWeight.w800)),
+          Text('${item.employeeCode} · ${item.status}',
+              style: captionStyle(weight: FontWeight.w800)),
         ],
       ),
     );
@@ -661,23 +875,41 @@ class EmployeeCard extends StatelessWidget {
 }
 
 class AdminOvertimeScreen extends StatelessWidget {
-  const AdminOvertimeScreen({super.key, required this.items, required this.onApprove, required this.onReject});
+  const AdminOvertimeScreen(
+      {super.key,
+      required this.items,
+      required this.onApprove,
+      required this.onReject});
   final List<Overtime> items;
   final ValueChanged<String> onApprove;
   final ValueChanged<String> onReject;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const EmptyState(message: 'Tidak ada lembur yang menunggu review.');
+    if (items.isEmpty) {
+      return const EmptyState(
+          message: 'Tidak ada lembur yang menunggu review.');
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: items.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: OvertimeReviewCard(item: item, onApprove: () => onApprove(item.id), onReject: () => onReject(item.id)))).toList(),
+      children: items
+          .map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: OvertimeReviewCard(
+                  item: item,
+                  onApprove: () => onApprove(item.id),
+                  onReject: () => onReject(item.id))))
+          .toList(),
     );
   }
 }
 
 class OvertimeReviewCard extends StatelessWidget {
-  const OvertimeReviewCard({super.key, required this.item, required this.onApprove, required this.onReject});
+  const OvertimeReviewCard(
+      {super.key,
+      required this.item,
+      required this.onApprove,
+      required this.onReject});
   final Overtime item;
   final VoidCallback onApprove;
   final VoidCallback onReject;
@@ -692,13 +924,19 @@ class OvertimeReviewCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(item.projectName, style: bodyStyle(weight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text('${durationLabel(item.durationMinutes)} · ${rupiah(item.amount)}', style: captionStyle(weight: FontWeight.w900)),
+          Text(
+              '${durationLabel(item.durationMinutes)} · ${rupiah(item.amount)}',
+              style: captionStyle(weight: FontWeight.w900)),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: OutlinedButton(onPressed: onReject, child: const Text('Tolak'))),
+              Expanded(
+                  child: OutlinedButton(
+                      onPressed: onReject, child: const Text('Tolak'))),
               const SizedBox(width: 10),
-              Expanded(child: FilledButton(onPressed: onApprove, child: const Text('Approve'))),
+              Expanded(
+                  child: FilledButton(
+                      onPressed: onApprove, child: const Text('Approve'))),
             ],
           ),
         ],
@@ -708,13 +946,22 @@ class OvertimeReviewCard extends StatelessWidget {
 }
 
 class AdminPayrollScreen extends StatelessWidget {
-  const AdminPayrollScreen({super.key, required this.payrolls, required this.periodStartController, required this.periodEndController, required this.onGenerate, required this.onPublish, required this.onMarkPaid});
+  const AdminPayrollScreen(
+      {super.key,
+      required this.payrolls,
+      required this.periodStartController,
+      required this.periodEndController,
+      required this.onGenerate,
+      required this.onPublish,
+      required this.onMarkPaid,
+      required this.onOpenDocument});
   final List<Payroll> payrolls;
   final TextEditingController periodStartController;
   final TextEditingController periodEndController;
   final VoidCallback onGenerate;
   final ValueChanged<String> onPublish;
   final ValueChanged<String> onMarkPaid;
+  final ValueChanged<String> onOpenDocument;
 
   @override
   Widget build(BuildContext context) {
@@ -727,9 +974,15 @@ class AdminPayrollScreen extends StatelessWidget {
             children: [
               Text('Generate payroll', style: sectionStyle()),
               const SizedBox(height: 14),
-              AppTextField(label: 'Periode mulai', controller: periodStartController, hint: 'YYYY-MM-DD'),
+              AppTextField(
+                  label: 'Periode mulai',
+                  controller: periodStartController,
+                  hint: 'YYYY-MM-DD'),
               const SizedBox(height: 12),
-              AppTextField(label: 'Periode selesai', controller: periodEndController, hint: 'YYYY-MM-DD'),
+              AppTextField(
+                  label: 'Periode selesai',
+                  controller: periodEndController,
+                  hint: 'YYYY-MM-DD'),
               const SizedBox(height: 16),
               PrimaryButton(label: 'GENERATE DRAFT', onPressed: onGenerate),
             ],
@@ -739,17 +992,29 @@ class AdminPayrollScreen extends StatelessWidget {
         if (payrolls.isEmpty)
           const EmptyState(message: 'Belum ada draft payroll.')
         else
-          ...payrolls.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: AdminPayrollCard(item: item, onPublish: () => onPublish(item.id), onMarkPaid: () => onMarkPaid(item.id)))),
+          ...payrolls.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AdminPayrollCard(
+                  item: item,
+                  onPublish: () => onPublish(item.id),
+                  onMarkPaid: () => onMarkPaid(item.id),
+                  onOpenDocument: () => onOpenDocument(item.id)))),
       ],
     );
   }
 }
 
 class AdminPayrollCard extends StatelessWidget {
-  const AdminPayrollCard({super.key, required this.item, required this.onPublish, required this.onMarkPaid});
+  const AdminPayrollCard(
+      {super.key,
+      required this.item,
+      required this.onPublish,
+      required this.onMarkPaid,
+      required this.onOpenDocument});
   final Payroll item;
   final VoidCallback onPublish;
   final VoidCallback onMarkPaid;
+  final VoidCallback onOpenDocument;
 
   @override
   Widget build(BuildContext context) {
@@ -759,17 +1024,23 @@ class AdminPayrollCard extends StatelessWidget {
         children: [
           Text(item.employeeName ?? 'Karyawan', style: sectionStyle()),
           const SizedBox(height: 8),
-          Text('${shortDate(item.periodStart)} - ${shortDate(item.periodEnd)} · ${item.status}', style: captionStyle(weight: FontWeight.w900)),
+          Text(
+              '${shortDate(item.periodStart)} - ${shortDate(item.periodEnd)} · ${item.status}',
+              style: captionStyle(weight: FontWeight.w900)),
           const SizedBox(height: 12),
           MetricRow(label: 'Hari kerja', value: '${item.workingDays} hari'),
           MetricRow(label: 'Net salary', value: rupiah(item.netSalary)),
           const SizedBox(height: 12),
+          SecondaryButton(label: 'DOKUMEN DETAIL', onPressed: onOpenDocument),
+          const SizedBox(height: 10),
           if (item.status == 'draft' || item.status == 'reviewed')
             PrimaryButton(label: 'PUBLISH PAYSLIP', onPressed: onPublish)
           else if (item.status == 'published')
             PrimaryButton(label: 'MARK PAID', onPressed: onMarkPaid)
           else
-            Text('✓ Paid', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+            Text('✓ Paid',
+                style: bodyStyle(
+                    color: AppColors.success, weight: FontWeight.w900)),
         ],
       ),
     );
@@ -788,18 +1059,27 @@ class AdminBottomNav extends StatelessWidget {
       selectedIndex: AdminTab.values.indexOf(tab),
       onDestinationSelected: (index) => onChanged(AdminTab.values[index]),
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Activity'),
-        NavigationDestination(icon: Icon(Icons.badge_outlined), label: 'Karyawan'),
-        NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Lembur'),
-        NavigationDestination(icon: Icon(Icons.payments_outlined), label: 'Payroll'),
+        NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined), label: 'Home'),
+        NavigationDestination(
+            icon: Icon(Icons.groups_outlined), label: 'Activity'),
+        NavigationDestination(
+            icon: Icon(Icons.badge_outlined), label: 'Karyawan'),
+        NavigationDestination(
+            icon: Icon(Icons.fact_check_outlined), label: 'Lembur'),
+        NavigationDestination(
+            icon: Icon(Icons.payments_outlined), label: 'Payroll'),
       ],
     );
   }
 }
 
 class EmployeeShell extends StatefulWidget {
-  const EmployeeShell({super.key, required this.api, required this.session, required this.onLogout});
+  const EmployeeShell(
+      {super.key,
+      required this.api,
+      required this.session,
+      required this.onLogout});
 
   final ApiClient api;
   final AuthSession session;
@@ -886,8 +1166,10 @@ class _EmployeeShellState extends State<EmployeeShell> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        setState(() => currentGeoText = 'Aktifkan izin lokasi untuk melakukan Check-in.');
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() =>
+            currentGeoText = 'Aktifkan izin lokasi untuk melakukan Check-in.');
         return;
       }
       final position = await Geolocator.getCurrentPosition(
@@ -895,7 +1177,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
       );
       setState(() {
         currentPosition = position;
-        currentGeoText = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+        currentGeoText =
+            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
       });
       _startLocationUpdates();
     } catch (_) {
@@ -914,7 +1197,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
       if (!mounted) return;
       setState(() {
         currentPosition = position;
-        currentGeoText = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+        currentGeoText =
+            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
       });
     });
   }
@@ -947,7 +1231,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
       return;
     }
     if (currentPosition == null) {
-      _snack('Lokasi belum ditemukan. Aktifkan izin lokasi untuk melakukan Check-in.');
+      _snack(
+          'Lokasi belum ditemukan. Aktifkan izin lokasi untuk melakukan Check-in.');
       return;
     }
     if (checkInPhoto == null) {
@@ -993,7 +1278,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
       return;
     }
     if (currentPosition == null) {
-      _snack('Lokasi belum ditemukan. Aktifkan izin lokasi untuk mulai lembur.');
+      _snack(
+          'Lokasi belum ditemukan. Aktifkan izin lokasi untuk mulai lembur.');
       return;
     }
     if (overtimePhoto == null) {
@@ -1032,6 +1318,22 @@ class _EmployeeShellState extends State<EmployeeShell> {
     }
   }
 
+  Future<void> _openPayrollDocument(String id) async {
+    setState(() => loading = true);
+    try {
+      final document =
+          await widget.api.payrollDocument(widget.session.token, id);
+      if (!mounted) return;
+      setState(() => loading = false);
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => PayrollDocumentScreen(document: document)));
+    } catch (err) {
+      _snack(friendlyError(err));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   void _snack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1051,7 +1353,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
           onPickPhoto: () => _pickPhoto(overtime: false),
           onCheckIn: _checkIn,
           onCheckOut: _checkOut,
-          onStartOvertimeShortcut: () => setState(() => tab = EmployeeTab.lembur),
+          onStartOvertimeShortcut: () =>
+              setState(() => tab = EmployeeTab.lembur),
         ),
       EmployeeTab.attendance => _AttendanceScreen(items: attendanceHistory),
       EmployeeTab.activity => _ActivityScreen(items: activity),
@@ -1068,7 +1371,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
           onFinish: _finishOvertime,
         ),
       EmployeeTab.profile => _ProfileScreen(user: widget.session.user),
-      EmployeeTab.payslip => _PayslipScreen(items: payslips),
+      EmployeeTab.payslip =>
+        _PayslipScreen(items: payslips, onOpenDocument: _openPayrollDocument),
       EmployeeTab.help => _HelpScreen(onRetryLocation: _loadLocation),
     };
 
@@ -1084,7 +1388,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
                   onMenu: () => setState(() => menuOpen = !menuOpen),
                 ),
                 if (loading) const LinearProgressIndicator(minHeight: 2),
-                if (error != null) ErrorBanner(message: error!, onRetry: _loadData),
+                if (error != null)
+                  ErrorBanner(message: error!, onRetry: _loadData),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _bootstrap,
@@ -1126,7 +1431,8 @@ class _EmployeeShellState extends State<EmployeeShell> {
 enum EmployeeTab { home, attendance, activity, lembur, profile, payslip, help }
 
 class _TopAppBar extends StatelessWidget {
-  const _TopAppBar({required this.user, required this.tab, required this.onMenu});
+  const _TopAppBar(
+      {required this.user, required this.tab, required this.onMenu});
 
   final AppUser user;
   final EmployeeTab tab;
@@ -1174,7 +1480,9 @@ class _TopAppBar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.primary),
               ),
-              child: Text(initials(user.name), style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
+              child: Text(initials(user.name),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900, color: AppColors.primary)),
             ),
           ),
         ],
@@ -1219,11 +1527,18 @@ class _HomeScreen extends StatelessWidget {
             subtitle: 'Jam kerja belum dimulai',
           ),
           const SizedBox(height: 24),
-          LocationCard(value: currentGeoText, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
+          LocationCard(
+              value: currentGeoText,
+              latitude: currentPosition?.latitude,
+              longitude: currentPosition?.longitude),
           const SizedBox(height: 22),
-          AppTextField(label: 'PROYEK / LOKASI KERJA', controller: projectController, hint: 'Isi nama/lokasi proyek'),
+          AppTextField(
+              label: 'PROYEK / LOKASI KERJA',
+              controller: projectController,
+              hint: 'Isi nama/lokasi proyek'),
           const SizedBox(height: 22),
-          PhotoUploadCard(photo: photo, onTap: onPickPhoto, label: 'BUKTI FOTO'),
+          PhotoUploadCard(
+              photo: photo, onTap: onPickPhoto, label: 'BUKTI FOTO'),
           const SizedBox(height: 22),
           PrimaryButton(label: 'CHECK-IN', onPressed: onCheckIn),
         ],
@@ -1238,17 +1553,23 @@ class _HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('● SEDANG BEKERJA', style: sectionStyle(color: AppColors.success)),
+                Text('● SEDANG BEKERJA',
+                    style: sectionStyle(color: AppColors.success)),
                 const SizedBox(height: 18),
                 MetricRow(label: 'Check-in', value: timeOnly(item.checkInTime)),
-                MetricRow(label: 'Durasi', value: durationUntilNow(item.checkInTime)),
+                MetricRow(
+                    label: 'Durasi', value: durationUntilNow(item.checkInTime)),
                 const SizedBox(height: 10),
                 Text(item.projectName, style: sectionStyle()),
               ],
             ),
           ),
           const SizedBox(height: 22),
-          LocationCard(value: item.geoText, compact: true, latitude: item.latitude?.toDouble(), longitude: item.longitude?.toDouble()),
+          LocationCard(
+              value: item.geoText,
+              compact: true,
+              latitude: item.latitude?.toDouble(),
+              longitude: item.longitude?.toDouble()),
           const SizedBox(height: 22),
           const SectionLabel(title: 'Bukti', child: PhotoThumb()),
           const SizedBox(height: 22),
@@ -1263,13 +1584,15 @@ class _HomeScreen extends StatelessWidget {
         StatusCard(
           label: '',
           title: '✓ PEKERJAAN SELESAI',
-          subtitle: 'Hari ini\n${timeOnly(item.checkInTime)} — ${timeOnly(item.checkOutTime!)}\n\nTotal kerja\n${durationLabel(item.durationMinutes)}\n\nProyek\n${item.projectName.replaceFirst('Proyek ', '')}',
+          subtitle:
+              'Hari ini\n${timeOnly(item.checkInTime)} — ${timeOnly(item.checkOutTime!)}\n\nTotal kerja\n${durationLabel(item.durationMinutes)}\n\nProyek\n${item.projectName.replaceFirst('Proyek ', '')}',
           success: true,
         ),
         const SizedBox(height: 26),
         Center(child: Text('Ingin melanjutkan lembur?', style: sectionStyle())),
         const SizedBox(height: 16),
-        PrimaryButton(label: 'MULAI LEMBUR', onPressed: onStartOvertimeShortcut),
+        PrimaryButton(
+            label: 'MULAI LEMBUR', onPressed: onStartOvertimeShortcut),
       ],
     );
   }
@@ -1347,7 +1670,8 @@ class _OvertimeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = overtimeHistory.where((item) => item.status == 'running').firstOrNull;
+    final active =
+        overtimeHistory.where((item) => item.status == 'running').firstOrNull;
     if (active != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1356,10 +1680,12 @@ class _OvertimeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('● LEMBUR BERJALAN', style: sectionStyle(color: AppColors.success)),
+                Text('● LEMBUR BERJALAN',
+                    style: sectionStyle(color: AppColors.success)),
                 const SizedBox(height: 18),
                 MetricRow(label: 'Mulai', value: timeOnly(active.startTime)),
-                MetricRow(label: 'Durasi', value: durationUntilNow(active.startTime)),
+                MetricRow(
+                    label: 'Durasi', value: durationUntilNow(active.startTime)),
                 const SizedBox(height: 10),
                 Text('Proyek', style: captionStyle()),
                 Text(active.projectName, style: sectionStyle()),
@@ -1370,7 +1696,8 @@ class _OvertimeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
-          PrimaryButton(label: 'SELESAI LEMBUR', onPressed: () => onFinish(active.id)),
+          PrimaryButton(
+              label: 'SELESAI LEMBUR', onPressed: () => onFinish(active.id)),
         ],
       );
     }
@@ -1386,15 +1713,29 @@ class _OvertimeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Status kerja normal', style: bodyStyle()),
-        Text('✓ Check-out ${timeOnly(attendance!.checkOutTime!)}', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+        Text('✓ Check-out ${timeOnly(attendance!.checkOutTime!)}',
+            style:
+                bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
         const SizedBox(height: 22),
-        AppTextField(label: 'Proyek', controller: projectController, hint: 'Isi nama/lokasi proyek'),
+        AppTextField(
+            label: 'Proyek',
+            controller: projectController,
+            hint: 'Isi nama/lokasi proyek'),
         const SizedBox(height: 18),
-        AppTextField(label: 'Keterangan', controller: noteController, hint: 'Isi keterangan lembur', maxLines: 3),
+        AppTextField(
+            label: 'Keterangan',
+            controller: noteController,
+            hint: 'Isi keterangan lembur',
+            maxLines: 3),
         const SizedBox(height: 18),
-        LocationCard(value: currentGeoText, compact: true, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
+        LocationCard(
+            value: currentGeoText,
+            compact: true,
+            latitude: currentPosition?.latitude,
+            longitude: currentPosition?.longitude),
         const SizedBox(height: 18),
-        PhotoUploadCard(photo: photo, onTap: onPickPhoto, label: 'Bukti lembur'),
+        PhotoUploadCard(
+            photo: photo, onTap: onPickPhoto, label: 'Bukti lembur'),
         const SizedBox(height: 22),
         PrimaryButton(label: 'MULAI LEMBUR', onPressed: onStart),
       ],
@@ -1425,27 +1766,33 @@ class _ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text('Nominal gaji tidak ditampilkan di profil karyawan.', style: captionStyle()),
+        Text('Nominal gaji tidak ditampilkan di profil karyawan.',
+            style: captionStyle()),
       ],
     );
   }
 }
 
 class _PayslipScreen extends StatelessWidget {
-  const _PayslipScreen({required this.items});
+  const _PayslipScreen({required this.items, required this.onOpenDocument});
   final List<PayslipItem> items;
+  final ValueChanged<String> onOpenDocument;
 
   @override
   Widget build(BuildContext context) {
     final item = items.firstOrNull;
     if (item == null) {
-      return const EmptyState(title: 'Payslip belum tersedia', message: 'Payslip baru tampil setelah payroll diterbitkan admin.');
+      return const EmptyState(
+          title: 'Payslip belum tersedia',
+          message: 'Payslip baru tampil setelah payroll diterbitkan admin.');
     }
     final payroll = item.payroll;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('${shortDate(payroll.periodStart)} – ${shortDate(payroll.periodEnd)}', style: bodyStyle(weight: FontWeight.w800)),
+        Text(
+            '${shortDate(payroll.periodStart)} – ${shortDate(payroll.periodEnd)}',
+            style: bodyStyle(weight: FontWeight.w800)),
         const SizedBox(height: 16),
         AppCard(
           child: Column(
@@ -1453,18 +1800,185 @@ class _PayslipScreen extends StatelessWidget {
             children: [
               Text('PAYSLIP', style: sectionStyle()),
               const SizedBox(height: 12),
-              MetricRow(label: 'Hari kerja', value: '${payroll.workingDays} hari'),
-              MetricRow(label: 'Gaji normal', value: rupiah(payroll.normalSalary)),
+              MetricRow(
+                  label: 'Hari kerja', value: '${payroll.workingDays} hari'),
+              MetricRow(
+                  label: 'Gaji normal', value: rupiah(payroll.normalSalary)),
               MetricRow(label: 'Lembur', value: rupiah(payroll.overtimeAmount)),
-              MetricRow(label: 'Cashbon', value: '-${rupiah(payroll.cashbonDeduction)}'),
+              MetricRow(
+                  label: 'Cashbon',
+                  value: '-${rupiah(payroll.cashbonDeduction)}'),
               const Divider(height: 26),
-              MetricRow(label: 'TOTAL', value: rupiah(payroll.netSalary), large: true),
+              MetricRow(
+                  label: 'TOTAL',
+                  value: rupiah(payroll.netSalary),
+                  large: true),
               const SizedBox(height: 12),
-              Text(payroll.status == 'paid' ? '✓ Sudah dibayar' : '✓ Payslip diterbitkan', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+              Text(
+                  payroll.status == 'paid'
+                      ? '✓ Sudah dibayar'
+                      : '✓ Payslip diterbitkan',
+                  style: bodyStyle(
+                      color: AppColors.success, weight: FontWeight.w900)),
+              const SizedBox(height: 14),
+              SecondaryButton(
+                  label: 'DOKUMEN DETAIL WAKTU KERJA',
+                  onPressed: () => onOpenDocument(payroll.id)),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class PayrollDocumentScreen extends StatelessWidget {
+  const PayrollDocumentScreen({super.key, required this.document});
+  final PayrollDocument document;
+
+  @override
+  Widget build(BuildContext context) {
+    final payroll = document.payroll;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.primary)),
+                  Expanded(
+                      child:
+                          Text('Dokumen waktu kerja', style: sectionStyle())),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+                children: [
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(payroll.employeeName ?? 'Karyawan',
+                            style: titleStyle()),
+                        const SizedBox(height: 6),
+                        Text(
+                            '${shortDate(payroll.periodStart)} - ${shortDate(payroll.periodEnd)}',
+                            style: captionStyle(weight: FontWeight.w900)),
+                        const SizedBox(height: 14),
+                        MetricRow(
+                            label: 'Hari sesuai absen',
+                            value: '${document.workDays.length} hari'),
+                        MetricRow(
+                            label: 'Total kerja',
+                            value: durationLabel(document.workDays.fold<int>(
+                                0, (sum, item) => sum + item.workMinutes))),
+                        MetricRow(
+                            label: 'Lembur',
+                            value: rupiah(payroll.overtimeAmount)),
+                        const Divider(height: 26),
+                        MetricRow(
+                            label: 'TOTAL',
+                            value: rupiah(payroll.netSalary),
+                            large: true),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Rincian harian',
+                      style: bodyStyle(weight: FontWeight.w800)),
+                  const SizedBox(height: 10),
+                  if (document.workDays.isEmpty)
+                    const EmptyState(
+                        message: 'Tidak ada data absen pada periode ini.')
+                  else
+                    ...document.workDays.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: WorkDayCard(item: item),
+                        )),
+                  const SizedBox(height: 10),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                                child: Text('Teks dokumen',
+                                    style: sectionStyle())),
+                            TextButton.icon(
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                    ClipboardData(text: document.text));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Dokumen dicopy.')));
+                                }
+                              },
+                              icon: const Icon(Icons.copy, size: 18),
+                              label: const Text('Copy'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        SelectableText(document.text,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                height: 1.45,
+                                color: AppColors.primary,
+                                fontFamily: 'monospace')),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WorkDayCard extends StatelessWidget {
+  const WorkDayCard({super.key, required this.item});
+  final WorkDayDetail item;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(fullDate(item.date), style: sectionStyle()),
+          const SizedBox(height: 8),
+          Text('${timeOnly(item.checkInTime)} - ${timeOnly(item.checkOutTime)}',
+              style: sectionStyle()),
+          Text('Jam kerja ${durationLabel(item.workMinutes)}',
+              style: captionStyle(weight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          Text(item.projectName, style: bodyStyle()),
+          if (item.overtimeMinutes > 0) ...[
+            const Divider(height: 22),
+            Text(
+                'Lembur ${timeOnly(item.overtimeStartTime)} - ${timeOnly(item.overtimeEndTime)}',
+                style: bodyStyle(weight: FontWeight.w900)),
+            Text(
+                '${durationLabel(item.overtimeMinutes)} · ${rupiah(item.overtimeAmount)}',
+                style: captionStyle(weight: FontWeight.w900)),
+            if (item.overtimeProjectName != null)
+              Text(item.overtimeProjectName!, style: captionStyle()),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1484,7 +1998,8 @@ class _HelpScreen extends StatelessWidget {
             children: [
               Text('Lokasi belum ditemukan', style: sectionStyle()),
               const SizedBox(height: 8),
-              Text('Aktifkan izin lokasi untuk melakukan Check-in.', style: bodyStyle(color: AppColors.muted)),
+              Text('Aktifkan izin lokasi untuk melakukan Check-in.',
+                  style: bodyStyle(color: AppColors.muted)),
               const SizedBox(height: 14),
               SecondaryButton(label: 'Coba Lagi', onPressed: onRetryLocation),
             ],
@@ -1497,7 +2012,9 @@ class _HelpScreen extends StatelessWidget {
             children: [
               Text('Tidak ada koneksi internet', style: sectionStyle()),
               const SizedBox(height: 8),
-              Text('Data Check-in belum terkirim. Jangan tampilkan sukses sebelum server menerima transaksi.', style: bodyStyle(color: AppColors.muted)),
+              Text(
+                  'Data Check-in belum terkirim. Jangan tampilkan sukses sebelum server menerima transaksi.',
+                  style: bodyStyle(color: AppColors.muted)),
             ],
           ),
         ),
@@ -1526,7 +2043,12 @@ class AppCard extends StatelessWidget {
 }
 
 class StatusCard extends StatelessWidget {
-  const StatusCard({super.key, required this.label, required this.title, required this.subtitle, this.success = false});
+  const StatusCard(
+      {super.key,
+      required this.label,
+      required this.title,
+      required this.subtitle,
+      this.success = false});
   final String label;
   final String title;
   final String subtitle;
@@ -1545,9 +2067,14 @@ class StatusCard extends StatelessWidget {
                 Text(label, style: captionStyle(weight: FontWeight.w900)),
                 const SizedBox(height: 20),
               ],
-              Text(title, textAlign: TextAlign.center, style: sectionStyle(color: success ? AppColors.success : AppColors.primary)),
+              Text(title,
+                  textAlign: TextAlign.center,
+                  style: sectionStyle(
+                      color: success ? AppColors.success : AppColors.primary)),
               const SizedBox(height: 10),
-              Text(subtitle, textAlign: TextAlign.center, style: bodyStyle(color: AppColors.muted)),
+              Text(subtitle,
+                  textAlign: TextAlign.center,
+                  style: bodyStyle(color: AppColors.muted)),
             ],
           ),
         ),
@@ -1557,7 +2084,12 @@ class StatusCard extends StatelessWidget {
 }
 
 class LocationCard extends StatelessWidget {
-  const LocationCard({super.key, required this.value, this.latitude, this.longitude, this.compact = false});
+  const LocationCard(
+      {super.key,
+      required this.value,
+      this.latitude,
+      this.longitude,
+      this.compact = false});
   final String value;
   final double? latitude;
   final double? longitude;
@@ -1570,17 +2102,28 @@ class LocationCard extends StatelessWidget {
       title: compact ? 'Lokasi' : 'LOKASI SAAT INI',
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: AppColors.soft, borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(
+            color: AppColors.soft, borderRadius: BorderRadius.circular(18)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(found ? '✓ Lokasi ditemukan' : value, style: bodyStyle(color: found ? AppColors.success : AppColors.warning, weight: FontWeight.w900)),
+            Text(found ? '✓ Lokasi ditemukan' : value,
+                style: bodyStyle(
+                    color: found ? AppColors.success : AppColors.warning,
+                    weight: FontWeight.w900)),
             const SizedBox(height: 12),
             MapPreview(latitude: latitude, longitude: longitude),
             const SizedBox(height: 12),
-            Text('Koordinat geolocation', style: captionStyle(weight: FontWeight.w900)),
+            Text('Koordinat geolocation',
+                style: captionStyle(weight: FontWeight.w900)),
             const SizedBox(height: 6),
-            Text(found ? value : 'Koordinat belum tersedia. Coba lagi dari menu Help.', style: bodyStyle(color: found ? AppColors.primary : AppColors.muted, weight: FontWeight.w900)),
+            Text(
+                found
+                    ? value
+                    : 'Koordinat belum tersedia. Coba lagi dari menu Help.',
+                style: bodyStyle(
+                    color: found ? AppColors.primary : AppColors.muted,
+                    weight: FontWeight.w900)),
           ],
         ),
       ),
@@ -1589,7 +2132,8 @@ class LocationCard extends StatelessWidget {
 }
 
 class MapPreview extends StatefulWidget {
-  const MapPreview({super.key, required this.latitude, required this.longitude});
+  const MapPreview(
+      {super.key, required this.latitude, required this.longitude});
   final double? latitude;
   final double? longitude;
 
@@ -1600,13 +2144,16 @@ class MapPreview extends StatefulWidget {
 class _MapPreviewState extends State<MapPreview> {
   final controller = MapController();
 
-  LatLng get center => LatLng(widget.latitude ?? -6.2088, widget.longitude ?? 106.8456);
+  LatLng get center =>
+      LatLng(widget.latitude ?? -6.2088, widget.longitude ?? 106.8456);
   bool get found => widget.latitude != null && widget.longitude != null;
 
   @override
   void didUpdateWidget(covariant MapPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (found && (oldWidget.latitude != widget.latitude || oldWidget.longitude != widget.longitude)) {
+    if (found &&
+        (oldWidget.latitude != widget.latitude ||
+            oldWidget.longitude != widget.longitude)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) controller.move(center, controller.camera.zoom);
       });
@@ -1629,7 +2176,8 @@ class _MapPreviewState extends State<MapPreview> {
                 initialZoom: found ? 16 : 12,
                 minZoom: 4,
                 maxZoom: 19,
-                interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+                interactionOptions:
+                    const InteractionOptions(flags: InteractiveFlag.all),
               ),
               children: [
                 TileLayer(
@@ -1643,23 +2191,42 @@ class _MapPreviewState extends State<MapPreview> {
                       width: 58,
                       height: 58,
                       child: Container(
-                        decoration: BoxDecoration(color: found ? AppColors.primary : AppColors.muted, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 8))]),
-                        child: const Icon(Icons.location_on, color: Colors.white, size: 32),
+                        decoration: BoxDecoration(
+                            color: found ? AppColors.primary : AppColors.muted,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.22),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8))
+                            ]),
+                        child: const Icon(Icons.location_on,
+                            color: Colors.white, size: 32),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-            Positioned(right: 12, top: 12, child: _MapPill(label: found ? 'Live GPS' : 'Menunggu GPS')),
+            Positioned(
+                right: 12,
+                top: 12,
+                child: _MapPill(label: found ? 'Live GPS' : 'Menunggu GPS')),
             Positioned(
               right: 12,
               bottom: 12,
               child: Column(
                 children: [
-                  _MapControl(icon: Icons.add, onTap: () => controller.move(controller.camera.center, controller.camera.zoom + 1)),
+                  _MapControl(
+                      icon: Icons.add,
+                      onTap: () => controller.move(controller.camera.center,
+                          controller.camera.zoom + 1)),
                   const SizedBox(height: 8),
-                  _MapControl(icon: Icons.remove, onTap: () => controller.move(controller.camera.center, controller.camera.zoom - 1)),
+                  _MapControl(
+                      icon: Icons.remove,
+                      onTap: () => controller.move(controller.camera.center,
+                          controller.camera.zoom - 1)),
                 ],
               ),
             ),
@@ -1667,9 +2234,13 @@ class _MapPreviewState extends State<MapPreview> {
               left: 14,
               bottom: 14,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
-                child: Text('Map geolocation', style: captionStyle(weight: FontWeight.w900)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(999)),
+                child: Text('Map geolocation',
+                    style: captionStyle(weight: FontWeight.w900)),
               ),
             ),
           ],
@@ -1692,7 +2263,10 @@ class _MapControl extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: SizedBox(width: 38, height: 38, child: Icon(icon, color: AppColors.primary, size: 20)),
+        child: SizedBox(
+            width: 38,
+            height: 38,
+            child: Icon(icon, color: AppColors.primary, size: 20)),
       ),
     );
   }
@@ -1706,14 +2280,20 @@ class _MapPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(999)),
       child: Text(label, style: captionStyle(weight: FontWeight.w900)),
     );
   }
 }
 
 class PhotoUploadCard extends StatelessWidget {
-  const PhotoUploadCard({super.key, required this.photo, required this.onTap, required this.label});
+  const PhotoUploadCard(
+      {super.key,
+      required this.photo,
+      required this.onTap,
+      required this.label});
   final XFile? photo;
   final VoidCallback onTap;
   final String label;
@@ -1747,10 +2327,14 @@ class PhotoUploadCard extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(File(photo!.path), width: 120, height: 82, fit: BoxFit.cover),
+                        child: Image.file(File(photo!.path),
+                            width: 120, height: 82, fit: BoxFit.cover),
                       ),
                       const SizedBox(height: 8),
-                      Text('✓ Foto siap', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+                      Text('✓ Foto siap',
+                          style: bodyStyle(
+                              color: AppColors.success,
+                              weight: FontWeight.w900)),
                     ],
                   ),
           ),
@@ -1773,13 +2357,20 @@ class PhotoThumb extends StatelessWidget {
         border: Border.all(color: AppColors.line),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Center(child: Text('thumbnail', style: captionStyle(weight: FontWeight.w900))),
+      child: Center(
+          child:
+              Text('thumbnail', style: captionStyle(weight: FontWeight.w900))),
     );
   }
 }
 
 class AppTextField extends StatelessWidget {
-  const AppTextField({super.key, required this.label, required this.controller, this.hint, this.maxLines = 1});
+  const AppTextField(
+      {super.key,
+      required this.label,
+      required this.controller,
+      this.hint,
+      this.maxLines = 1});
   final String label;
   final TextEditingController controller;
   final String? hint;
@@ -1802,13 +2393,20 @@ class AppTextField extends StatelessWidget {
 InputDecoration inputDecoration(String? hint) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: captionStyle().copyWith(color: AppColors.muted.withValues(alpha: 0.56)),
+    hintStyle:
+        captionStyle().copyWith(color: AppColors.muted.withValues(alpha: 0.56)),
     filled: true,
     fillColor: Colors.white,
     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: AppColors.line)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: AppColors.line)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
+    border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(13),
+        borderSide: const BorderSide(color: AppColors.line)),
+    enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(13),
+        borderSide: const BorderSide(color: AppColors.line)),
+    focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(13),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
   );
 }
 
@@ -1831,7 +2429,8 @@ class SectionLabel extends StatelessWidget {
 }
 
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton({super.key, required this.label, required this.onPressed});
+  const PrimaryButton(
+      {super.key, required this.label, required this.onPressed});
   final String label;
   final VoidCallback onPressed;
 
@@ -1845,13 +2444,16 @@ class PrimaryButton extends StatelessWidget {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.4)),
+      child: Text(label,
+          style:
+              const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.4)),
     );
   }
 }
 
 class SecondaryButton extends StatelessWidget {
-  const SecondaryButton({super.key, required this.label, required this.onPressed});
+  const SecondaryButton(
+      {super.key, required this.label, required this.onPressed});
   final String label;
   final VoidCallback onPressed;
 
@@ -1871,7 +2473,11 @@ class SecondaryButton extends StatelessWidget {
 }
 
 class MetricRow extends StatelessWidget {
-  const MetricRow({super.key, required this.label, required this.value, this.large = false});
+  const MetricRow(
+      {super.key,
+      required this.label,
+      required this.value,
+      this.large = false});
   final String label;
   final String value;
   final bool large;
@@ -1882,8 +2488,10 @@ class MetricRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: bodyStyle(color: AppColors.muted))),
-          Text(value, style: large ? moneyStyle() : bodyStyle(weight: FontWeight.w900)),
+          Expanded(
+              child: Text(label, style: bodyStyle(color: AppColors.muted))),
+          Text(value,
+              style: large ? moneyStyle() : bodyStyle(weight: FontWeight.w900)),
         ],
       ),
     );
@@ -1903,11 +2511,15 @@ class AttendanceCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(fullDate(item.date), style: sectionStyle())),
-              Text(item.status == 'running' ? '● Masuk' : '✓ Hadir', style: bodyStyle(color: AppColors.success, weight: FontWeight.w900)),
+              Text(item.status == 'running' ? '● Masuk' : '✓ Hadir',
+                  style: bodyStyle(
+                      color: AppColors.success, weight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 12),
-          Text('${timeOnly(item.checkInTime)} → ${item.checkOutTime == null ? '-' : timeOnly(item.checkOutTime!)}', style: sectionStyle()),
+          Text(
+              '${timeOnly(item.checkInTime)} → ${item.checkOutTime == null ? '-' : timeOnly(item.checkOutTime!)}',
+              style: sectionStyle()),
           Text(durationLabel(item.durationMinutes), style: captionStyle()),
           const SizedBox(height: 12),
           Text(item.projectName, style: bodyStyle()),
@@ -1938,14 +2550,16 @@ class ActivityTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
+      decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('$icon ${item.employeeName}', style: sectionStyle()),
           const SizedBox(height: 4),
           Text(label, style: bodyStyle()),
-          if (item.projectName != null) Text(item.projectName!, style: captionStyle()),
+          if (item.projectName != null)
+            Text(item.projectName!, style: captionStyle()),
         ],
       ),
     );
@@ -1953,7 +2567,11 @@ class ActivityTile extends StatelessWidget {
 }
 
 class AccountMenu extends StatelessWidget {
-  const AccountMenu({super.key, required this.user, required this.onSelect, required this.onLogout});
+  const AccountMenu(
+      {super.key,
+      required this.user,
+      required this.onSelect,
+      required this.onLogout});
   final AppUser user;
   final ValueChanged<EmployeeTab> onSelect;
   final VoidCallback onLogout;
@@ -1973,8 +2591,10 @@ class AccountMenu extends StatelessWidget {
             Text(user.name, style: sectionStyle()),
             Text('Employee', style: captionStyle()),
             const SizedBox(height: 8),
-            MenuButton(label: 'Profile', onTap: () => onSelect(EmployeeTab.profile)),
-            MenuButton(label: 'Payslip', onTap: () => onSelect(EmployeeTab.payslip)),
+            MenuButton(
+                label: 'Profile', onTap: () => onSelect(EmployeeTab.profile)),
+            MenuButton(
+                label: 'Payslip', onTap: () => onSelect(EmployeeTab.payslip)),
             MenuButton(label: 'Help', onTap: () => onSelect(EmployeeTab.help)),
             MenuButton(label: 'Logout', onTap: onLogout),
           ],
@@ -2019,19 +2639,28 @@ class BottomNav extends StatelessWidget {
         EmployeeTab.lembur => 3,
         _ => 0,
       },
-      onDestinationSelected: (index) => onChanged([EmployeeTab.home, EmployeeTab.attendance, EmployeeTab.activity, EmployeeTab.lembur][index]),
+      onDestinationSelected: (index) => onChanged([
+        EmployeeTab.home,
+        EmployeeTab.attendance,
+        EmployeeTab.activity,
+        EmployeeTab.lembur
+      ][index]),
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.history_outlined), label: 'Attendance'),
-        NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Activity'),
-        NavigationDestination(icon: Icon(Icons.timer_outlined), label: 'Lembur'),
+        NavigationDestination(
+            icon: Icon(Icons.history_outlined), label: 'Attendance'),
+        NavigationDestination(
+            icon: Icon(Icons.groups_outlined), label: 'Activity'),
+        NavigationDestination(
+            icon: Icon(Icons.timer_outlined), label: 'Lembur'),
       ],
     );
   }
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, this.title = 'Data kosong', required this.message});
+  const EmptyState(
+      {super.key, this.title = 'Data kosong', required this.message});
   final String title;
   final String message;
 
@@ -2042,7 +2671,9 @@ class EmptyState extends StatelessWidget {
         children: [
           Text(title, style: sectionStyle()),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: bodyStyle(color: AppColors.muted)),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: bodyStyle(color: AppColors.muted)),
         ],
       ),
     );
@@ -2055,12 +2686,23 @@ class LoadingScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const CircularProgressIndicator(), const SizedBox(height: 16), Text(message)])));
+    return Scaffold(
+        body: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const CircularProgressIndicator(),
+      const SizedBox(height: 16),
+      Text(message)
+    ])));
   }
 }
 
 class ErrorScaffold extends StatelessWidget {
-  const ErrorScaffold({super.key, required this.title, required this.message, required this.actionLabel, required this.onAction});
+  const ErrorScaffold(
+      {super.key,
+      required this.title,
+      required this.message,
+      required this.actionLabel,
+      required this.onAction});
   final String title;
   final String message;
   final String actionLabel;
@@ -2103,10 +2745,15 @@ class ErrorBanner extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFFFF4ED), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: const Color(0xFFFFF4ED),
+          borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Expanded(child: Text(message, style: bodyStyle(color: AppColors.error, weight: FontWeight.w800))),
+          Expanded(
+              child: Text(message,
+                  style: bodyStyle(
+                      color: AppColors.error, weight: FontWeight.w800))),
           TextButton(onPressed: onRetry, child: const Text('Coba Lagi')),
         ],
       ),
@@ -2119,17 +2766,26 @@ class ApiClient {
   final String baseUrl;
 
   Future<AuthSession> login(String username, String password) async {
-    final json = await _request('POST', '/api/auth/login', body: {'username': username, 'password': password});
+    final json = await _request('POST', '/api/auth/login',
+        body: {'username': username, 'password': password});
     return AuthSession.fromJson(json);
   }
 
-  Future<AuthSession> register({required String name, required String username, required String password}) async {
-    final json = await _request('POST', '/api/auth/register', body: {'name': name, 'username': username, 'password': password});
+  Future<AuthSession> register(
+      {required String name,
+      required String username,
+      required String password}) async {
+    final json = await _request('POST', '/api/auth/register',
+        body: {'name': name, 'username': username, 'password': password});
     return AuthSession.fromJson(json);
   }
 
-  Future<AuthSession> registerAdmin({required String name, required String username, required String password}) async {
-    final json = await _request('POST', '/api/auth/register-admin', body: {'name': name, 'username': username, 'password': password});
+  Future<AuthSession> registerAdmin(
+      {required String name,
+      required String username,
+      required String password}) async {
+    final json = await _request('POST', '/api/auth/register-admin',
+        body: {'name': name, 'username': username, 'password': password});
     return AuthSession.fromJson(json);
   }
 
@@ -2140,25 +2796,35 @@ class ApiClient {
 
   Future<List<EmployeeRecord>> employees(String token) async {
     final json = await _request('GET', '/api/employees', token: token);
-    return (json['employees'] as List<dynamic>).map((item) => EmployeeRecord.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['employees'] as List<dynamic>)
+        .map((item) => EmployeeRecord.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<Overtime>> pendingOvertime(String token) async {
     final json = await _request('GET', '/api/overtime/pending', token: token);
-    return (json['overtime'] as List<dynamic>).map((item) => Overtime.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['overtime'] as List<dynamic>)
+        .map((item) => Overtime.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> reviewOvertime(String token, String id, String action) async {
-    await _request('POST', '/api/overtime/$id/review', token: token, body: {'action': action});
+    await _request('POST', '/api/overtime/$id/review',
+        token: token, body: {'action': action});
   }
 
   Future<List<Payroll>> payrolls(String token) async {
     final json = await _request('GET', '/api/payroll', token: token);
-    return (json['payrolls'] as List<dynamic>).map((item) => Payroll.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['payrolls'] as List<dynamic>)
+        .map((item) => Payroll.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<void> generatePayroll(String token, String periodStart, String periodEnd) async {
-    await _request('POST', '/api/payroll/generate', token: token, body: {'period_start': periodStart, 'period_end': periodEnd});
+  Future<void> generatePayroll(
+      String token, String periodStart, String periodEnd) async {
+    await _request('POST', '/api/payroll/generate',
+        token: token,
+        body: {'period_start': periodStart, 'period_end': periodEnd});
   }
 
   Future<void> publishPayroll(String token, String id) async {
@@ -2169,61 +2835,107 @@ class ApiClient {
     await _request('POST', '/api/payroll/$id/mark-paid', token: token);
   }
 
+  Future<PayrollDocument> payrollDocument(String token, String id) async {
+    final json =
+        await _request('GET', '/api/payroll/$id/document', token: token);
+    return PayrollDocument.fromJson(json['document'] as Map<String, dynamic>);
+  }
+
   Future<Attendance?> todayAttendance(String token) async {
     final json = await _request('GET', '/api/attendance/today', token: token);
     final value = json['attendance'];
-    return value == null ? null : Attendance.fromJson(value as Map<String, dynamic>);
+    return value == null
+        ? null
+        : Attendance.fromJson(value as Map<String, dynamic>);
   }
 
   Future<List<Attendance>> attendanceHistory(String token) async {
     final json = await _request('GET', '/api/attendance/history', token: token);
-    return (json['attendance'] as List<dynamic>).map((item) => Attendance.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['attendance'] as List<dynamic>)
+        .map((item) => Attendance.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<ActivityItem>> activity(String token) async {
     final json = await _request('GET', '/api/activity', token: token);
-    return (json['activity'] as List<dynamic>).map((item) => ActivityItem.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['activity'] as List<dynamic>)
+        .map((item) => ActivityItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<Overtime>> overtimeHistory(String token) async {
     final json = await _request('GET', '/api/overtime/history', token: token);
-    return (json['overtime'] as List<dynamic>).map((item) => Overtime.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['overtime'] as List<dynamic>)
+        .map((item) => Overtime.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<PayslipItem>> payslips(String token) async {
     final json = await _request('GET', '/api/payslips', token: token);
-    return (json['payslips'] as List<dynamic>).map((item) => PayslipItem.fromJson(item as Map<String, dynamic>)).toList();
+    return (json['payslips'] as List<dynamic>)
+        .map((item) => PayslipItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<void> checkIn({required String token, required String projectName, required String photo, required double latitude, required double longitude}) async {
-    await _request('POST', '/api/attendance/check-in', token: token, body: {'project_name': projectName, 'photo': photo, 'latitude': latitude, 'longitude': longitude});
+  Future<void> checkIn(
+      {required String token,
+      required String projectName,
+      required String photo,
+      required double latitude,
+      required double longitude}) async {
+    await _request('POST', '/api/attendance/check-in', token: token, body: {
+      'project_name': projectName,
+      'photo': photo,
+      'latitude': latitude,
+      'longitude': longitude
+    });
   }
 
   Future<void> checkOut(String token) async {
     await _request('POST', '/api/attendance/check-out', token: token);
   }
 
-  Future<void> startOvertime({required String token, required String projectName, required String description, required String photo, required double latitude, required double longitude}) async {
-    await _request('POST', '/api/overtime/start', token: token, body: {'project_name': projectName, 'description': description, 'photo': photo, 'latitude': latitude, 'longitude': longitude});
+  Future<void> startOvertime(
+      {required String token,
+      required String projectName,
+      required String description,
+      required String photo,
+      required double latitude,
+      required double longitude}) async {
+    await _request('POST', '/api/overtime/start', token: token, body: {
+      'project_name': projectName,
+      'description': description,
+      'photo': photo,
+      'latitude': latitude,
+      'longitude': longitude
+    });
   }
 
   Future<void> finishOvertime(String token, String id) async {
     await _request('POST', '/api/overtime/$id/finish', token: token);
   }
 
-  Future<Map<String, dynamic>> _request(String method, String path, {String? token, Map<String, dynamic>? body}) async {
+  Future<Map<String, dynamic>> _request(String method, String path,
+      {String? token, Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$baseUrl$path');
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (token != null) headers['Authorization'] = 'Bearer $token';
 
     final response = await switch (method) {
-      'GET' => http.get(uri, headers: headers).timeout(const Duration(seconds: 10)),
-      'POST' => http.post(uri, headers: headers, body: body == null ? null : jsonEncode(body)).timeout(const Duration(seconds: 10)),
+      'GET' =>
+        http.get(uri, headers: headers).timeout(const Duration(seconds: 10)),
+      'POST' => http
+          .post(uri,
+              headers: headers, body: body == null ? null : jsonEncode(body))
+          .timeout(const Duration(seconds: 10)),
       _ => throw ApiException('Method tidak didukung.'),
     };
-    final decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400) {
-      throw ApiException(decoded['error']?['message']?.toString() ?? 'Terjadi kesalahan server.');
+      throw ApiException(decoded['error']?['message']?.toString() ??
+          'Terjadi kesalahan server.');
     }
     return decoded;
   }
@@ -2237,7 +2949,11 @@ class ApiException implements Exception {
 }
 
 class AdminSummary {
-  AdminSummary({required this.masuk, required this.belumMasuk, required this.lembur, required this.pendingOvertime});
+  AdminSummary(
+      {required this.masuk,
+      required this.belumMasuk,
+      required this.lembur,
+      required this.pendingOvertime});
   final int masuk;
   final int belumMasuk;
   final int lembur;
@@ -2251,7 +2967,11 @@ class AdminSummary {
 }
 
 class EmployeeRecord {
-  EmployeeRecord({required this.id, required this.employeeCode, required this.name, required this.status});
+  EmployeeRecord(
+      {required this.id,
+      required this.employeeCode,
+      required this.name,
+      required this.status});
   final String id;
   final String employeeCode;
   final String name;
@@ -2268,20 +2988,39 @@ class AuthSession {
   AuthSession({required this.token, required this.user});
   final String token;
   final AppUser user;
-  factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(token: json['token'] as String, user: AppUser.fromJson(json['user'] as Map<String, dynamic>));
+  factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
+      token: json['token'] as String,
+      user: AppUser.fromJson(json['user'] as Map<String, dynamic>));
 }
 
 class AppUser {
-  AppUser({required this.id, required this.name, required this.role, this.employeeId});
+  AppUser(
+      {required this.id,
+      required this.name,
+      required this.role,
+      this.employeeId});
   final String id;
   final String name;
   final String role;
   final String? employeeId;
-  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(id: json['id'] as String, name: json['name'] as String, role: json['role'] as String, employeeId: json['employee_id'] as String?);
+  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      role: json['role'] as String,
+      employeeId: json['employee_id'] as String?);
 }
 
 class Attendance {
-  Attendance({required this.id, required this.date, required this.projectName, required this.checkInTime, required this.checkOutTime, required this.status, required this.durationMinutes, this.latitude, this.longitude});
+  Attendance(
+      {required this.id,
+      required this.date,
+      required this.projectName,
+      required this.checkInTime,
+      required this.checkOutTime,
+      required this.status,
+      required this.durationMinutes,
+      this.latitude,
+      this.longitude});
   final String id;
   final String date;
   final String projectName;
@@ -2291,7 +3030,9 @@ class Attendance {
   final int durationMinutes;
   final num? latitude;
   final num? longitude;
-  String get geoText => latitude == null || longitude == null ? '-' : '${latitude!.toStringAsFixed(4)}, ${longitude!.toStringAsFixed(4)}';
+  String get geoText => latitude == null || longitude == null
+      ? '-'
+      : '${latitude!.toStringAsFixed(4)}, ${longitude!.toStringAsFixed(4)}';
   factory Attendance.fromJson(Map<String, dynamic> json) => Attendance(
         id: json['id'] as String,
         date: json['date'].toString().substring(0, 10),
@@ -2306,16 +3047,33 @@ class Attendance {
 }
 
 class ActivityItem {
-  ActivityItem({required this.employeeName, required this.status, this.time, this.projectName});
+  ActivityItem(
+      {required this.employeeName,
+      required this.status,
+      this.time,
+      this.projectName});
   final String employeeName;
   final String status;
   final String? time;
   final String? projectName;
-  factory ActivityItem.fromJson(Map<String, dynamic> json) => ActivityItem(employeeName: json['employee_name'] as String, status: json['status'] as String, time: json['time'] as String?, projectName: json['project_name'] as String?);
+  factory ActivityItem.fromJson(Map<String, dynamic> json) => ActivityItem(
+      employeeName: json['employee_name'] as String,
+      status: json['status'] as String,
+      time: json['time'] as String?,
+      projectName: json['project_name'] as String?);
 }
 
 class Overtime {
-  Overtime({required this.id, required this.projectName, required this.description, required this.startTime, this.endTime, required this.status, this.employeeName, this.durationMinutes = 0, this.amount = 0});
+  Overtime(
+      {required this.id,
+      required this.projectName,
+      required this.description,
+      required this.startTime,
+      this.endTime,
+      required this.status,
+      this.employeeName,
+      this.durationMinutes = 0,
+      this.amount = 0});
   final String id;
   final String projectName;
   final String description;
@@ -2342,11 +3100,23 @@ class PayslipItem {
   PayslipItem({required this.id, required this.payroll});
   final String id;
   final Payroll payroll;
-  factory PayslipItem.fromJson(Map<String, dynamic> json) => PayslipItem(id: json['id'] as String, payroll: Payroll.fromJson(json['payroll'] as Map<String, dynamic>));
+  factory PayslipItem.fromJson(Map<String, dynamic> json) => PayslipItem(
+      id: json['id'] as String,
+      payroll: Payroll.fromJson(json['payroll'] as Map<String, dynamic>));
 }
 
 class Payroll {
-  Payroll({required this.id, required this.periodStart, required this.periodEnd, required this.workingDays, required this.normalSalary, required this.overtimeAmount, required this.cashbonDeduction, required this.netSalary, required this.status, this.employeeName});
+  Payroll(
+      {required this.id,
+      required this.periodStart,
+      required this.periodEnd,
+      required this.workingDays,
+      required this.normalSalary,
+      required this.overtimeAmount,
+      required this.cashbonDeduction,
+      required this.netSalary,
+      required this.status,
+      this.employeeName});
   final String id;
   final String periodStart;
   final String periodEnd;
@@ -2371,18 +3141,114 @@ class Payroll {
       );
 }
 
-TextStyle titleStyle() => const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.7, color: AppColors.primary);
-TextStyle sectionStyle({Color color = AppColors.primary}) => TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color);
-TextStyle bodyStyle({Color color = AppColors.primary, FontWeight weight = FontWeight.w500}) => TextStyle(fontSize: 15, fontWeight: weight, color: color);
-TextStyle captionStyle({FontWeight weight = FontWeight.w600}) => TextStyle(fontSize: 13, fontWeight: weight, color: AppColors.muted);
-TextStyle moneyStyle() => const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1.1, color: AppColors.primary);
+class PayrollDocument {
+  PayrollDocument(
+      {required this.id,
+      required this.generatedAt,
+      required this.payroll,
+      required this.workDays,
+      required this.text});
+  final String id;
+  final String generatedAt;
+  final Payroll payroll;
+  final List<WorkDayDetail> workDays;
+  final String text;
+  factory PayrollDocument.fromJson(Map<String, dynamic> json) =>
+      PayrollDocument(
+        id: json['id'] as String,
+        generatedAt: json['generated_at'] as String,
+        payroll: Payroll.fromJson(json['payroll'] as Map<String, dynamic>),
+        workDays: (json['work_days'] as List<dynamic>)
+            .map((item) => WorkDayDetail.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        text: json['text'] as String,
+      );
+}
+
+class WorkDayDetail {
+  WorkDayDetail(
+      {required this.date,
+      required this.projectName,
+      required this.checkInTime,
+      required this.checkOutTime,
+      required this.status,
+      required this.workMinutes,
+      required this.overtimeMinutes,
+      required this.overtimeAmount,
+      this.overtimeStartTime,
+      this.overtimeEndTime,
+      this.overtimeProjectName});
+  final String date;
+  final String projectName;
+  final String checkInTime;
+  final String? checkOutTime;
+  final String status;
+  final int workMinutes;
+  final int overtimeMinutes;
+  final int overtimeAmount;
+  final String? overtimeStartTime;
+  final String? overtimeEndTime;
+  final String? overtimeProjectName;
+  factory WorkDayDetail.fromJson(Map<String, dynamic> json) => WorkDayDetail(
+        date: json['date'].toString().substring(0, 10),
+        projectName: json['project_name'] as String,
+        checkInTime: json['check_in_time'] as String,
+        checkOutTime: json['check_out_time'] as String?,
+        status: json['status'] as String,
+        workMinutes: (json['work_minutes'] as num?)?.toInt() ?? 0,
+        overtimeMinutes: (json['overtime_minutes'] as num?)?.toInt() ?? 0,
+        overtimeAmount: (json['overtime_amount'] as num?)?.toInt() ?? 0,
+        overtimeStartTime: json['overtime_start_time'] as String?,
+        overtimeEndTime: json['overtime_end_time'] as String?,
+        overtimeProjectName: json['overtime_project_name'] as String?,
+      );
+}
+
+TextStyle titleStyle() => const TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w900,
+    letterSpacing: -0.7,
+    color: AppColors.primary);
+TextStyle sectionStyle({Color color = AppColors.primary}) =>
+    TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color);
+TextStyle bodyStyle(
+        {Color color = AppColors.primary,
+        FontWeight weight = FontWeight.w500}) =>
+    TextStyle(fontSize: 15, fontWeight: weight, color: color);
+TextStyle captionStyle({FontWeight weight = FontWeight.w600}) =>
+    TextStyle(fontSize: 13, fontWeight: weight, color: AppColors.muted);
+TextStyle moneyStyle() => const TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w900,
+    letterSpacing: -1.1,
+    color: AppColors.primary);
 
 String firstName(String name) => name.split(' ').first;
-String initials(String name) => name.split(' ').where((part) => part.isNotEmpty).map((part) => part[0]).take(2).join().toUpperCase();
-String _timeLabel() => '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+String initials(String name) => name
+    .split(' ')
+    .where((part) => part.isNotEmpty)
+    .map((part) => part[0])
+    .take(2)
+    .join()
+    .toUpperCase();
+String _timeLabel() =>
+    '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
 String todayLabel() {
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
   final value = DateTime.now();
   return '${days[value.weekday - 1]}, ${value.day} ${months[value.month - 1]} ${value.year}';
 }
@@ -2408,11 +3274,26 @@ String durationUntilNow(String iso) {
   return durationLabel(minutes);
 }
 
-bool isDateInput(String value) => RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value) && DateTime.tryParse(value) != null;
+bool isDateInput(String value) =>
+    RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value) &&
+    DateTime.tryParse(value) != null;
 
 String fullDate(String date) {
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
   final value = DateTime.tryParse(date);
   if (value == null) return date;
   return '${days[value.weekday - 1]}, ${value.day} ${months[value.month - 1]}';
@@ -2421,12 +3302,27 @@ String fullDate(String date) {
 String shortDate(String date) {
   final value = DateTime.tryParse(date);
   if (value == null) return date;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
   return '${value.day} ${months[value.month - 1]}';
 }
 
 String rupiah(int value) {
-  final text = value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
+  final text = value
+      .toString()
+      .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
   return 'Rp$text';
 }
 
