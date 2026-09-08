@@ -1082,12 +1082,77 @@ class LocationCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(found ? '📍 $value' : value, style: bodyStyle(weight: FontWeight.w900)),
+            Text(found ? '✓ Lokasi ditemukan' : value, style: bodyStyle(color: found ? AppColors.success : AppColors.warning, weight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            MapPreview(found: found),
+            const SizedBox(height: 12),
+            Text('Koordinat geolocation', style: captionStyle(weight: FontWeight.w900)),
             const SizedBox(height: 6),
-            Text(found ? '✓ Lokasi ditemukan' : 'Coba Lagi dari menu Help', style: bodyStyle(color: found ? AppColors.success : AppColors.warning, weight: FontWeight.w900)),
+            Text(found ? value : 'Koordinat belum tersedia. Coba lagi dari menu Help.', style: bodyStyle(color: found ? AppColors.primary : AppColors.muted, weight: FontWeight.w900)),
           ],
         ),
       ),
+    );
+  }
+}
+
+class MapPreview extends StatelessWidget {
+  const MapPreview({super.key, required this.found});
+  final bool found;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 142,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: found ? const [Color(0xFFDDF8F4), Color(0xFFEAF3FF)] : const [Color(0xFFE8EDF4), Color(0xFFF6F8FB)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(left: -20, right: -20, top: 34, child: Transform.rotate(angle: -0.18, child: Container(height: 16, color: Colors.white.withValues(alpha: 0.72)))),
+            Positioned(left: 42, top: -20, bottom: -20, child: Transform.rotate(angle: 0.38, child: Container(width: 14, color: Colors.white.withValues(alpha: 0.58)))),
+            Positioned(left: -10, right: -10, bottom: 28, child: Transform.rotate(angle: 0.12, child: Container(height: 12, color: AppColors.accent.withValues(alpha: 0.22)))),
+            Positioned(right: 18, top: 16, child: _MapPill(label: found ? 'Live GPS' : 'GPS belum siap')),
+            Center(
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(color: found ? AppColors.primary : AppColors.muted, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.18), blurRadius: 20, offset: const Offset(0, 10))]),
+                child: const Icon(Icons.location_on, color: Colors.white, size: 30),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              bottom: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
+                child: Text('Map geolocation', style: captionStyle(weight: FontWeight.w900)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapPill extends StatelessWidget {
+  const _MapPill({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: captionStyle(weight: FontWeight.w900)),
     );
   }
 }
