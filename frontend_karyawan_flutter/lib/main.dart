@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -357,6 +359,7 @@ class _EmployeeShellState extends State<EmployeeShell> {
   List<PayslipItem> payslips = [];
   String currentGeoText = 'Mencari lokasi...';
   Position? currentPosition;
+  StreamSubscription<Position>? locationSubscription;
   XFile? checkInPhoto;
   XFile? overtimePhoto;
   final projectController = TextEditingController(text: 'Proyek Apartemen Cempaka');
@@ -371,6 +374,7 @@ class _EmployeeShellState extends State<EmployeeShell> {
 
   @override
   void dispose() {
+    locationSubscription?.cancel();
     projectController.dispose();
     overtimeProjectController.dispose();
     overtimeNoteController.dispose();
@@ -431,9 +435,26 @@ class _EmployeeShellState extends State<EmployeeShell> {
         currentPosition = position;
         currentGeoText = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
       });
+      _startLocationUpdates();
     } catch (_) {
       setState(() => currentGeoText = 'Lokasi belum ditemukan');
     }
+  }
+
+  void _startLocationUpdates() {
+    locationSubscription?.cancel();
+    locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    ).listen((position) {
+      if (!mounted) return;
+      setState(() {
+        currentPosition = position;
+        currentGeoText = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+      });
+    });
   }
 
   Future<void> _pickPhoto({required bool overtime}) async {
@@ -562,6 +583,7 @@ class _EmployeeShellState extends State<EmployeeShell> {
       EmployeeTab.home => _HomeScreen(
           attendance: todayAttendance,
           currentGeoText: currentGeoText,
+          currentPosition: currentPosition,
           photo: checkInPhoto,
           projectController: projectController,
           onPickPhoto: () => _pickPhoto(overtime: false),
@@ -574,6 +596,7 @@ class _EmployeeShellState extends State<EmployeeShell> {
       EmployeeTab.lembur => _OvertimeScreen(
           attendance: todayAttendance,
           currentGeoText: currentGeoText,
+          currentPosition: currentPosition,
           projectController: overtimeProjectController,
           noteController: overtimeNoteController,
           photo: overtimePhoto,
@@ -702,6 +725,7 @@ class _HomeScreen extends StatelessWidget {
   const _HomeScreen({
     required this.attendance,
     required this.currentGeoText,
+    required this.currentPosition,
     required this.photo,
     required this.projectController,
     required this.onPickPhoto,
@@ -712,6 +736,7 @@ class _HomeScreen extends StatelessWidget {
 
   final Attendance? attendance;
   final String currentGeoText;
+  final Position? currentPosition;
   final XFile? photo;
   final TextEditingController projectController;
   final VoidCallback onPickPhoto;
@@ -732,7 +757,7 @@ class _HomeScreen extends StatelessWidget {
             subtitle: 'Jam kerja belum dimulai',
           ),
           const SizedBox(height: 24),
-          LocationCard(value: currentGeoText),
+          LocationCard(value: currentGeoText, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
           const SizedBox(height: 22),
           AppTextField(label: 'PROYEK / LOKASI KERJA', controller: projectController),
           const SizedBox(height: 22),
@@ -761,7 +786,7 @@ class _HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
-          SectionLabel(title: 'Lokasi Check-in', child: Text('📍 ${item.geoText}', style: bodyStyle(weight: FontWeight.w800))),
+          LocationCard(value: item.geoText, compact: true, latitude: item.latitude?.toDouble(), longitude: item.longitude?.toDouble()),
           const SizedBox(height: 22),
           const SectionLabel(title: 'Bukti', child: PhotoThumb()),
           const SizedBox(height: 22),
@@ -836,6 +861,7 @@ class _OvertimeScreen extends StatelessWidget {
   const _OvertimeScreen({
     required this.attendance,
     required this.currentGeoText,
+    required this.currentPosition,
     required this.projectController,
     required this.noteController,
     required this.photo,
@@ -847,6 +873,7 @@ class _OvertimeScreen extends StatelessWidget {
 
   final Attendance? attendance;
   final String currentGeoText;
+  final Position? currentPosition;
   final TextEditingController projectController;
   final TextEditingController noteController;
   final XFile? photo;
@@ -902,7 +929,7 @@ class _OvertimeScreen extends StatelessWidget {
         const SizedBox(height: 18),
         AppTextField(label: 'Keterangan', controller: noteController, maxLines: 3),
         const SizedBox(height: 18),
-        LocationCard(value: currentGeoText, compact: true),
+        LocationCard(value: currentGeoText, compact: true, latitude: currentPosition?.latitude, longitude: currentPosition?.longitude),
         const SizedBox(height: 18),
         PhotoUploadCard(photo: photo, onTap: onPickPhoto, label: 'Bukti lembur'),
         const SizedBox(height: 22),
@@ -1067,8 +1094,10 @@ class StatusCard extends StatelessWidget {
 }
 
 class LocationCard extends StatelessWidget {
-  const LocationCard({super.key, required this.value, this.compact = false});
+  const LocationCard({super.key, required this.value, this.latitude, this.longitude, this.compact = false});
   final String value;
+  final double? latitude;
+  final double? longitude;
   final bool compact;
 
   @override
@@ -1084,7 +1113,7 @@ class LocationCard extends StatelessWidget {
           children: [
             Text(found ? '✓ Lokasi ditemukan' : value, style: bodyStyle(color: found ? AppColors.success : AppColors.warning, weight: FontWeight.w900)),
             const SizedBox(height: 12),
-            MapPreview(found: found),
+            MapPreview(latitude: latitude, longitude: longitude),
             const SizedBox(height: 12),
             Text('Koordinat geolocation', style: captionStyle(weight: FontWeight.w900)),
             const SizedBox(height: 6),
@@ -1096,35 +1125,79 @@ class LocationCard extends StatelessWidget {
   }
 }
 
-class MapPreview extends StatelessWidget {
-  const MapPreview({super.key, required this.found});
-  final bool found;
+class MapPreview extends StatefulWidget {
+  const MapPreview({super.key, required this.latitude, required this.longitude});
+  final double? latitude;
+  final double? longitude;
+
+  @override
+  State<MapPreview> createState() => _MapPreviewState();
+}
+
+class _MapPreviewState extends State<MapPreview> {
+  final controller = MapController();
+
+  LatLng get center => LatLng(widget.latitude ?? -6.2088, widget.longitude ?? 106.8456);
+  bool get found => widget.latitude != null && widget.longitude != null;
+
+  @override
+  void didUpdateWidget(covariant MapPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (found && (oldWidget.latitude != widget.latitude || oldWidget.longitude != widget.longitude)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) controller.move(center, controller.camera.zoom);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 142,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: found ? const [Color(0xFFDDF8F4), Color(0xFFEAF3FF)] : const [Color(0xFFE8EDF4), Color(0xFFF6F8FB)],
-          ),
-        ),
+        height: 180,
+        color: AppColors.soft,
         child: Stack(
           children: [
-            Positioned(left: -20, right: -20, top: 34, child: Transform.rotate(angle: -0.18, child: Container(height: 16, color: Colors.white.withValues(alpha: 0.72)))),
-            Positioned(left: 42, top: -20, bottom: -20, child: Transform.rotate(angle: 0.38, child: Container(width: 14, color: Colors.white.withValues(alpha: 0.58)))),
-            Positioned(left: -10, right: -10, bottom: 28, child: Transform.rotate(angle: 0.12, child: Container(height: 12, color: AppColors.accent.withValues(alpha: 0.22)))),
-            Positioned(right: 18, top: 16, child: _MapPill(label: found ? 'Live GPS' : 'GPS belum siap')),
-            Center(
-              child: Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(color: found ? AppColors.primary : AppColors.muted, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.18), blurRadius: 20, offset: const Offset(0, 10))]),
-                child: const Icon(Icons.location_on, color: Colors.white, size: 30),
+            FlutterMap(
+              mapController: controller,
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: found ? 16 : 12,
+                minZoom: 4,
+                maxZoom: 19,
+                interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.frontend_karyawan_flutter',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: center,
+                      width: 58,
+                      height: 58,
+                      child: Container(
+                        decoration: BoxDecoration(color: found ? AppColors.primary : AppColors.muted, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 8))]),
+                        child: const Icon(Icons.location_on, color: Colors.white, size: 32),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Positioned(right: 12, top: 12, child: _MapPill(label: found ? 'Live GPS' : 'Menunggu GPS')),
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Column(
+                children: [
+                  _MapControl(icon: Icons.add, onTap: () => controller.move(controller.camera.center, controller.camera.zoom + 1)),
+                  const SizedBox(height: 8),
+                  _MapControl(icon: Icons.remove, onTap: () => controller.move(controller.camera.center, controller.camera.zoom - 1)),
+                ],
               ),
             ),
             Positioned(
@@ -1138,6 +1211,25 @@ class MapPreview extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MapControl extends StatelessWidget {
+  const _MapControl({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.94),
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox(width: 38, height: 38, child: Icon(icon, color: AppColors.primary, size: 20)),
       ),
     );
   }
