@@ -11,18 +11,40 @@ const minutesBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(
 const money = (value) => Math.round(Number(value || 0));
 
 const db = {
-  users: [],
+  users: fixtureEmployees().map((employee) => ({ id: `user-${employee.key}`, name: employee.name, username: employee.username, password: "password", role: ROLE.EMPLOYEE, employee_id: `emp-${employee.key}`, status: "active" })),
   sessions: new Map(),
-  employees: [],
-  salaryRates: [],
-  attendance: [],
-  overtime: [],
+  employees: fixtureEmployees().map((employee, index) => ({ id: `emp-${employee.key}`, user_id: `user-${employee.key}`, employee_code: `EMP-${String(index + 1).padStart(3, "0")}`, name: employee.name, status: "active", created_at: now() })),
+  salaryRates: fixtureEmployees().map((employee) => ({ id: `rate-${employee.key}`, employee_id: `emp-${employee.key}`, daily_rate: employee.dailyRate, overtime_rate: employee.overtimeRate, effective_date: "2026-09-01", updated_by: null, updated_at: now() })),
+  attendance: fixtureAttendance(),
+  overtime: fixtureOvertime(),
   cashbon: [],
   cashbonDeductions: [],
   payrolls: [],
   payslips: [],
   auditLogs: []
 };
+
+function fixtureEmployees() {
+  return [
+    { key: "andi", username: "andi", name: "Andi Pratama", project: "Proyek Menara Utara", lat: -6.1754, lon: 106.8272, dailyRate: 150000, overtimeRate: 30000, overtimeMinutes: 60 },
+    { key: "siti", username: "siti", name: "Siti Aminah", project: "Proyek Gudang Timur", lat: -6.2297, lon: 106.6894, dailyRate: 165000, overtimeRate: 35000, overtimeMinutes: 90 },
+    { key: "dimas", username: "dimas", name: "Dimas Saputra", project: "Proyek Ruko Selatan", lat: -6.3024, lon: 106.8951, dailyRate: 175000, overtimeRate: 40000, overtimeMinutes: 120 },
+    { key: "maya", username: "maya", name: "Maya Lestari", project: "Proyek Apartemen Barat", lat: -6.2019, lon: 106.7816, dailyRate: 160000, overtimeRate: 32500, overtimeMinutes: 150 },
+    { key: "reza", username: "reza", name: "Reza Maulana", project: "Proyek Mall Pusat", lat: -6.1931, lon: 106.8218, dailyRate: 180000, overtimeRate: 45000, overtimeMinutes: 180 }
+  ];
+}
+
+function fixtureDates() {
+  return ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-07", "2026-09-08"];
+}
+
+function fixtureAttendance() {
+  return fixtureEmployees().flatMap((employee) => fixtureDates().map((date, dayIndex) => ({ id: `att-${employee.key}-${date}`, employee_id: `emp-${employee.key}`, date, project_name: employee.project, check_in_time: `${date}T01:${String(dayIndex).padStart(2, "0")}:00.000Z`, check_in_latitude: employee.lat, check_in_longitude: employee.lon, check_in_photo: `photos/${employee.key}-${date}.jpg`, check_out_time: `${date}T10:${String(dayIndex + 2).padStart(2, "0")}:00.000Z`, notes: "", status: "completed", created_at: `${date}T01:${String(dayIndex).padStart(2, "0")}:00.000Z`, updated_at: `${date}T10:${String(dayIndex + 2).padStart(2, "0")}:00.000Z` })));
+}
+
+function fixtureOvertime() {
+  return fixtureEmployees().map((employee, index) => { const date = fixtureDates()[index + 1]; const amount = money((employee.overtimeMinutes / 60) * employee.overtimeRate); return { id: `ot-${employee.key}-${date}`, employee_id: `emp-${employee.key}`, attendance_id: `att-${employee.key}-${date}`, date, project_name: employee.project, description: "Lembur penyelesaian pekerjaan", photo: `photos/${employee.key}-overtime-${date}.jpg`, latitude: employee.lat, longitude: employee.lon, start_time: `${date}T10:15:00.000Z`, end_time: `${date}T${String(10 + Math.floor((15 + employee.overtimeMinutes) / 60)).padStart(2, "0")}:${String((15 + employee.overtimeMinutes) % 60).padStart(2, "0")}:00.000Z`, duration_minutes: employee.overtimeMinutes, rate: employee.overtimeRate, amount, status: "completed" }; });
+}
 
 function send(res, status, body = {}) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS" });
@@ -40,6 +62,7 @@ function audit(user, module, recordId, action, oldValue = null, newValue = null)
 function rate(employeeId) { return db.salaryRates.find((item) => item.employee_id === employeeId); }
 function balance(employeeId) { return db.cashbon.filter((c) => c.employee_id === employeeId && c.status === "approved").reduce((s, c) => s + c.amount, 0) - db.cashbonDeductions.filter((d) => d.employee_id === employeeId).reduce((s, d) => s + d.amount, 0); }
 function attendanceDto(item, priv) { const result = { ...item, employee_name: db.employees.find((e) => e.id === item.employee_id)?.name || null, duration_minutes: item.check_out_time ? minutesBetween(item.check_in_time, item.check_out_time) : 0 }; if (!priv) { delete result.check_in_photo; delete result.check_in_latitude; delete result.check_in_longitude; } return result; }
+function overtimeDto(item) { return { ...item, employee_name: db.employees.find((e) => e.id === item.employee_id)?.name || null }; }
 function payrollDto(p, user) { const result = { ...p }; if (user.role !== ROLE.ADMIN) { delete result.daily_rate_snapshot; delete result.overtime_rate_snapshot; } return result; }
 function calcPayroll(employee, start, end, deduction = 0) { const r = rate(employee.id); const att = db.attendance.filter((a) => a.employee_id === employee.id && a.date >= start && a.date <= end && ["completed", "corrected"].includes(a.status)); const ot = db.overtime.filter((o) => o.employee_id === employee.id && o.date >= start && o.date <= end && o.status === "approved"); const normal = att.length * r.daily_rate; const overtime = ot.reduce((s, o) => s + o.amount, 0); return { employee_id: employee.id, employee_name: employee.name, period_start: start, period_end: end, working_days: att.length, daily_rate_snapshot: r.daily_rate, overtime_rate_snapshot: r.overtime_rate, overtime_minutes: ot.reduce((s, o) => s + o.duration_minutes, 0), normal_salary: normal, overtime_amount: overtime, cashbon_balance: balance(employee.id), cashbon_deduction: deduction, net_salary: normal + overtime - deduction }; }
 
@@ -70,8 +93,8 @@ route("GET", "/api/admin/dashboard", async (req, res) => { if (!admin(req, res))
 
 route("POST", "/api/overtime/start", async (req, res) => { const user = auth(req, res); if (!user) return; const b = await body(req); const a = db.attendance.find((x) => x.employee_id === user.employee_id && x.date === today() && x.status === "completed"); if (!a) return fail(res, 409, "Lembur baru bisa dimulai setelah Check-out kerja normal."); if (!b.project_name || !b.description || !b.photo) return fail(res, 422, "Proyek, keterangan, dan foto lembur wajib diisi."); const r = rate(user.employee_id); const item = { id: randomUUID(), employee_id: user.employee_id, attendance_id: a.id, date: today(), project_name: b.project_name, description: b.description, photo: b.photo, latitude: Number(b.latitude), longitude: Number(b.longitude), start_time: now(), end_time: null, duration_minutes: 0, rate: r.overtime_rate, amount: 0, status: "running" }; db.overtime.push(item); audit(user, "overtime", item.id, "start", null, item); send(res, 201, { overtime: item }); });
 route("POST", "/api/overtime/:id/finish", async (req, res, p) => { const user = auth(req, res); if (!user) return; const item = db.overtime.find((o) => o.id === p.id && o.employee_id === user.employee_id); if (!item || item.status !== "running") return fail(res, 409, "Lembur tidak sedang berjalan."); const before = { ...item }; item.end_time = now(); item.duration_minutes = minutesBetween(item.start_time, item.end_time); item.amount = money((item.duration_minutes / 60) * item.rate); item.status = "completed"; audit(user, "overtime", item.id, "finish", before, item); send(res, 200, { overtime: item }); });
-route("GET", "/api/overtime/history", async (req, res) => { const user = auth(req, res); if (!user) return; const employeeId = user.role === ROLE.ADMIN ? new URL(req.url, `http://${req.headers.host}`).searchParams.get("employee_id") : user.employee_id; send(res, 200, { overtime: db.overtime.filter((o) => !employeeId || o.employee_id === employeeId) }); });
-route("GET", "/api/overtime/pending", async (req, res) => { if (admin(req, res)) send(res, 200, { overtime: db.overtime.filter((o) => o.status === "completed") }); });
+route("GET", "/api/overtime/history", async (req, res) => { const user = auth(req, res); if (!user) return; const employeeId = user.role === ROLE.ADMIN ? new URL(req.url, `http://${req.headers.host}`).searchParams.get("employee_id") : user.employee_id; send(res, 200, { overtime: db.overtime.filter((o) => !employeeId || o.employee_id === employeeId).map(overtimeDto) }); });
+route("GET", "/api/overtime/pending", async (req, res) => { if (admin(req, res)) send(res, 200, { overtime: db.overtime.filter((o) => o.status === "completed").map(overtimeDto) }); });
 route("POST", "/api/overtime/:id/review", async (req, res, p) => { const user = admin(req, res); if (!user) return; const b = await body(req); const item = db.overtime.find((o) => o.id === p.id); if (!item) return fail(res, 404, "Lembur tidak ditemukan."); const before = { ...item }; if (b.action === "approve") item.status = "approved"; else if (b.action === "reject") item.status = "rejected"; else if (b.action === "correct") { item.duration_minutes = Number(b.duration_minutes); item.amount = money((item.duration_minutes / 60) * item.rate); item.status = "corrected"; } else return fail(res, 422, "action harus approve, reject, atau correct."); item.reviewed_by = user.id; item.reviewed_at = now(); audit(user, "overtime", item.id, `review_${b.action}`, before, item); send(res, 200, { overtime: item }); });
 
 route("GET", "/api/cashbon", async (req, res) => { const user = auth(req, res); if (!user) return; const employeeId = user.role === ROLE.ADMIN ? new URL(req.url, `http://${req.headers.host}`).searchParams.get("employee_id") : user.employee_id; const ledger = [...db.cashbon.filter((c) => c.employee_id === employeeId).map((c) => ({ type: "cashbon", id: c.id, date: c.transaction_date, amount: c.amount, description: c.description, status: c.status })), ...db.cashbonDeductions.filter((d) => d.employee_id === employeeId).map((d) => ({ type: "deduction", id: d.id, date: d.created_at.slice(0, 10), amount: -d.amount, description: "Potongan Payroll", payroll_id: d.payroll_id }))]; send(res, 200, { balance: balance(employeeId), ledger }); });

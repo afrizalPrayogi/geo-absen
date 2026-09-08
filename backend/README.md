@@ -42,7 +42,23 @@ postgres://postgres:postgres@localhost:5432/attendance_payroll
 
 ## Registrasi dan Login
 
-Data awal dikosongkan. Buat akun karyawan dari aplikasi mobile atau endpoint register.
+Data awal berisi fixture karyawan untuk test payroll/admin. Akun tambahan tetap bisa dibuat dari aplikasi mobile atau endpoint register.
+
+Untuk kebutuhan test payroll/admin, backend menyertakan fixture 5 karyawan dengan 6 hari kerja dan lembur maksimal 3 jam. Periode payroll fixture:
+
+```text
+2026-09-01 sampai 2026-09-08
+```
+
+Akun karyawan fixture memakai password `password`:
+
+| Username | Nama |
+|---|---|
+| `andi` | Andi Pratama |
+| `siti` | Siti Aminah |
+| `dimas` | Dimas Saputra |
+| `maya` | Maya Lestari |
+| `reza` | Reza Maulana |
 
 Admin pertama dibuat dari aplikasi mobile dengan pilihan `Admin pertama` atau endpoint bootstrap admin. Endpoint ini hanya berhasil selama belum ada admin aktif.
 
