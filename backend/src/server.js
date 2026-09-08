@@ -13,7 +13,8 @@ const ATTENDANCE = Object.freeze({ RUNNING: "running", COMPLETED: "completed", C
 const OVERTIME = Object.freeze({ RUNNING: "running", COMPLETED: "completed", APPROVED: "approved", CORRECTED: "corrected", REJECTED: "rejected" });
 const PAYROLL = Object.freeze({ DRAFT: "draft", REVIEWED: "reviewed", PUBLISHED: "published", PAID: "paid" });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const jakartaDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
+const today = () => jakartaDateFormatter.format(new Date());
 const nowIso = () => new Date().toISOString();
 const moneyRound = (value) => Math.round(Number(value || 0));
 const isPositiveNumber = (value) => Number.isFinite(Number(value)) && Number(value) > 0;

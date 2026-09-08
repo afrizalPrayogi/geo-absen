@@ -4,8 +4,9 @@ import { randomUUID } from "node:crypto";
 const PORT = Number(process.env.PORT || 3000);
 const ROLE = { EMPLOYEE: "employee", ADMIN: "admin" };
 const PAYROLL = { DRAFT: "draft", PUBLISHED: "published", PAID: "paid" };
+const jakartaDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
 const now = () => new Date().toISOString();
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => jakartaDateFormatter.format(new Date());
 const minutesBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 60000));
 const money = (value) => Math.round(Number(value || 0));
 
