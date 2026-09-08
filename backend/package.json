@@ -1,0 +1,19 @@
+{
+  "name": "attendance-payroll-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:local": "node src/server.local.js",
+    "check": "node --check src/server.js && node --check src/server.local.js && node --check scripts/create-db.js && node --check scripts/init-db.js",
+    "db:create": "node scripts/create-db.js",
+    "db:init": "node scripts/init-db.js"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
