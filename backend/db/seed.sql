@@ -23,11 +23,11 @@ UPDATE app_users SET employee_id = 'emp-maya' WHERE id = 'user-maya';
 UPDATE app_users SET employee_id = 'emp-reza' WHERE id = 'user-reza';
 
 INSERT INTO salary_rates (id, employee_id, daily_rate, overtime_rate, effective_date, updated_by) VALUES
-  ('rate-andi', 'emp-andi', 150000, 30000, '2026-09-01', NULL),
-  ('rate-siti', 'emp-siti', 165000, 35000, '2026-09-01', NULL),
-  ('rate-dimas', 'emp-dimas', 175000, 40000, '2026-09-01', NULL),
-  ('rate-maya', 'emp-maya', 160000, 32500, '2026-09-01', NULL),
-  ('rate-reza', 'emp-reza', 180000, 45000, '2026-09-01', NULL)
+  ('rate-andi', 'emp-andi', 125000, 10000, '2026-09-01', NULL),
+  ('rate-siti', 'emp-siti', 150000, 12500, '2026-09-01', NULL),
+  ('rate-dimas', 'emp-dimas', 175000, 15000, '2026-09-01', NULL),
+  ('rate-maya', 'emp-maya', 200000, 17500, '2026-09-01', NULL),
+  ('rate-reza', 'emp-reza', 225000, 20000, '2026-09-01', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO attendance (id, employee_id, date, project_name, check_in_time, check_in_latitude, check_in_longitude, check_in_photo, check_out_time, notes, status, created_at, updated_at) VALUES
@@ -64,11 +64,11 @@ INSERT INTO attendance (id, employee_id, date, project_name, check_in_time, chec
 ON CONFLICT (employee_id, date) DO NOTHING;
 
 INSERT INTO overtime (id, employee_id, attendance_id, date, project_name, description, photo, latitude, longitude, start_time, end_time, duration_minutes, rate, amount, status, reviewed_by, reviewed_at) VALUES
-  ('ot-andi-2026-09-02', 'emp-andi', 'att-andi-2026-09-02', '2026-09-02', 'Proyek Menara Utara', 'Lembur penyelesaian pekerjaan', 'photos/andi-overtime-2026-09-02.jpg', -6.1754, 106.8272, '2026-09-02T10:15:00Z', '2026-09-02T11:15:00Z', 60, 30000, 30000, 'completed', NULL, NULL),
-  ('ot-siti-2026-09-03', 'emp-siti', 'att-siti-2026-09-03', '2026-09-03', 'Proyek Gudang Timur', 'Lembur penyelesaian pekerjaan', 'photos/siti-overtime-2026-09-03.jpg', -6.2297, 106.6894, '2026-09-03T10:15:00Z', '2026-09-03T11:45:00Z', 90, 35000, 52500, 'completed', NULL, NULL),
-  ('ot-dimas-2026-09-04', 'emp-dimas', 'att-dimas-2026-09-04', '2026-09-04', 'Proyek Ruko Selatan', 'Lembur penyelesaian pekerjaan', 'photos/dimas-overtime-2026-09-04.jpg', -6.3024, 106.8951, '2026-09-04T10:15:00Z', '2026-09-04T12:15:00Z', 120, 40000, 80000, 'completed', NULL, NULL),
-  ('ot-maya-2026-09-07', 'emp-maya', 'att-maya-2026-09-07', '2026-09-07', 'Proyek Apartemen Barat', 'Lembur penyelesaian pekerjaan', 'photos/maya-overtime-2026-09-07.jpg', -6.2019, 106.7816, '2026-09-07T10:15:00Z', '2026-09-07T12:45:00Z', 150, 32500, 81250, 'completed', NULL, NULL),
-  ('ot-reza-2026-09-08', 'emp-reza', 'att-reza-2026-09-08', '2026-09-08', 'Proyek Mall Pusat', 'Lembur penyelesaian pekerjaan', 'photos/reza-overtime-2026-09-08.jpg', -6.1931, 106.8218, '2026-09-08T10:15:00Z', '2026-09-08T13:15:00Z', 180, 45000, 135000, 'completed', NULL, NULL)
+  ('ot-andi-2026-09-02', 'emp-andi', 'att-andi-2026-09-02', '2026-09-02', 'Proyek Menara Utara', 'Lembur penyelesaian pekerjaan', 'photos/andi-overtime-2026-09-02.jpg', -6.1754, 106.8272, '2026-09-02T10:15:00Z', '2026-09-02T11:15:00Z', 60, 10000, 10000, 'completed', NULL, NULL),
+  ('ot-siti-2026-09-03', 'emp-siti', 'att-siti-2026-09-03', '2026-09-03', 'Proyek Gudang Timur', 'Lembur penyelesaian pekerjaan', 'photos/siti-overtime-2026-09-03.jpg', -6.2297, 106.6894, '2026-09-03T10:15:00Z', '2026-09-03T11:45:00Z', 90, 12500, 18750, 'completed', NULL, NULL),
+  ('ot-dimas-2026-09-04', 'emp-dimas', 'att-dimas-2026-09-04', '2026-09-04', 'Proyek Ruko Selatan', 'Lembur penyelesaian pekerjaan', 'photos/dimas-overtime-2026-09-04.jpg', -6.3024, 106.8951, '2026-09-04T10:15:00Z', '2026-09-04T12:15:00Z', 120, 15000, 30000, 'completed', NULL, NULL),
+  ('ot-maya-2026-09-07', 'emp-maya', 'att-maya-2026-09-07', '2026-09-07', 'Proyek Apartemen Barat', 'Lembur penyelesaian pekerjaan', 'photos/maya-overtime-2026-09-07.jpg', -6.2019, 106.7816, '2026-09-07T10:15:00Z', '2026-09-07T12:45:00Z', 150, 17500, 43750, 'completed', NULL, NULL),
+  ('ot-reza-2026-09-08', 'emp-reza', 'att-reza-2026-09-08', '2026-09-08', 'Proyek Mall Pusat', 'Lembur penyelesaian pekerjaan', 'photos/reza-overtime-2026-09-08.jpg', -6.1931, 106.8218, '2026-09-08T10:15:00Z', '2026-09-08T13:15:00Z', 180, 20000, 60000, 'completed', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO leave_requests (id, employee_id, type, start_date, end_date, duration_days, reason, attachment, status) VALUES

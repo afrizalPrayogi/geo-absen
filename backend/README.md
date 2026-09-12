@@ -44,7 +44,7 @@ postgres://postgres:postgres@localhost:5432/attendance_payroll
 
 Data awal berisi fixture karyawan untuk test payroll/admin. Akun tambahan tetap bisa dibuat dari aplikasi mobile atau endpoint register.
 
-Untuk kebutuhan test payroll/admin, backend menyertakan fixture 5 karyawan dengan 6 hari kerja dan lembur maksimal 3 jam. Periode payroll fixture:
+Untuk kebutuhan test payroll/admin, backend menyertakan fixture 5 karyawan dengan 6 hari kerja, lembur bervariasi 1-3 jam, gaji harian Rp125.000-Rp225.000, dan rate lembur Rp10.000-Rp20.000 per jam. Periode payroll fixture:
 
 ```text
 2026-09-01 sampai 2026-09-08

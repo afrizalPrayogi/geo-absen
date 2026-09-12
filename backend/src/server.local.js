@@ -30,11 +30,11 @@ const db = {
 
 function fixtureEmployees() {
   return [
-    { key: "andi", username: "andi", name: "Andi Pratama", project: "Proyek Menara Utara", lat: -6.1754, lon: 106.8272, dailyRate: 150000, overtimeRate: 30000, overtimeMinutes: 60 },
-    { key: "siti", username: "siti", name: "Siti Aminah", project: "Proyek Gudang Timur", lat: -6.2297, lon: 106.6894, dailyRate: 165000, overtimeRate: 35000, overtimeMinutes: 90 },
-    { key: "dimas", username: "dimas", name: "Dimas Saputra", project: "Proyek Ruko Selatan", lat: -6.3024, lon: 106.8951, dailyRate: 175000, overtimeRate: 40000, overtimeMinutes: 120 },
-    { key: "maya", username: "maya", name: "Maya Lestari", project: "Proyek Apartemen Barat", lat: -6.2019, lon: 106.7816, dailyRate: 160000, overtimeRate: 32500, overtimeMinutes: 150 },
-    { key: "reza", username: "reza", name: "Reza Maulana", project: "Proyek Mall Pusat", lat: -6.1931, lon: 106.8218, dailyRate: 180000, overtimeRate: 45000, overtimeMinutes: 180 }
+    { key: "andi", username: "andi", name: "Andi Pratama", project: "Proyek Menara Utara", lat: -6.1754, lon: 106.8272, dailyRate: 125000, overtimeRate: 10000, overtimeMinutes: 60 },
+    { key: "siti", username: "siti", name: "Siti Aminah", project: "Proyek Gudang Timur", lat: -6.2297, lon: 106.6894, dailyRate: 150000, overtimeRate: 12500, overtimeMinutes: 90 },
+    { key: "dimas", username: "dimas", name: "Dimas Saputra", project: "Proyek Ruko Selatan", lat: -6.3024, lon: 106.8951, dailyRate: 175000, overtimeRate: 15000, overtimeMinutes: 120 },
+    { key: "maya", username: "maya", name: "Maya Lestari", project: "Proyek Apartemen Barat", lat: -6.2019, lon: 106.7816, dailyRate: 200000, overtimeRate: 17500, overtimeMinutes: 150 },
+    { key: "reza", username: "reza", name: "Reza Maulana", project: "Proyek Mall Pusat", lat: -6.1931, lon: 106.8218, dailyRate: 225000, overtimeRate: 20000, overtimeMinutes: 180 }
   ];
 }
 
