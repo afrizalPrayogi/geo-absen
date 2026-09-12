@@ -4,6 +4,8 @@
 !/backend/**
 !/frontend_karyawan_flutter/
 !/frontend_karyawan_flutter/**
+!/admin_web_nextjs/
+!/admin_web_nextjs/**
 
 backend/node_modules/
 backend/.env
@@ -16,3 +18,8 @@ frontend_karyawan_flutter/android/.gradle/
 frontend_karyawan_flutter/android/local.properties
 frontend_karyawan_flutter/.flutter-plugins
 frontend_karyawan_flutter/.flutter-plugins-dependencies
+
+admin_web_nextjs/node_modules/
+admin_web_nextjs/.next/
+admin_web_nextjs/out/
+admin_web_nextjs/.env.local

@@ -95,6 +95,28 @@ CREATE TABLE IF NOT EXISTS overtime (
 CREATE INDEX IF NOT EXISTS overtime_employee_date_idx ON overtime(employee_id, date DESC);
 CREATE INDEX IF NOT EXISTS overtime_status_idx ON overtime(status);
 
+CREATE TABLE IF NOT EXISTS leave_requests (
+  id TEXT PRIMARY KEY,
+  employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('sick', 'personal', 'family', 'other')),
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  duration_days INTEGER NOT NULL CHECK (duration_days > 0),
+  reason TEXT NOT NULL,
+  attachment TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by TEXT REFERENCES app_users(id),
+  reviewed_at TIMESTAMPTZ,
+  reject_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+
+CREATE INDEX IF NOT EXISTS leave_requests_employee_date_idx ON leave_requests(employee_id, start_date DESC, end_date DESC);
+CREATE INDEX IF NOT EXISTS leave_requests_status_idx ON leave_requests(status);
+CREATE INDEX IF NOT EXISTS leave_requests_range_idx ON leave_requests(start_date, end_date);
+
 CREATE TABLE IF NOT EXISTS cashbon_transactions (
   id TEXT PRIMARY KEY,
   employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,

@@ -71,4 +71,10 @@ INSERT INTO overtime (id, employee_id, attendance_id, date, project_name, descri
   ('ot-reza-2026-09-08', 'emp-reza', 'att-reza-2026-09-08', '2026-09-08', 'Proyek Mall Pusat', 'Lembur penyelesaian pekerjaan', 'photos/reza-overtime-2026-09-08.jpg', -6.1931, 106.8218, '2026-09-08T10:15:00Z', '2026-09-08T13:15:00Z', 180, 45000, 135000, 'completed', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO leave_requests (id, employee_id, type, start_date, end_date, duration_days, reason, attachment, status) VALUES
+  ('leave-siti-2026-09-09', 'emp-siti', 'sick', '2026-09-09', '2026-09-10', 2, 'Sakit demam dan perlu istirahat.', 'attachments/siti-surat-dokter.jpg', 'pending'),
+  ('leave-maya-2026-09-11', 'emp-maya', 'personal', '2026-09-11', '2026-09-11', 1, 'Keperluan keluarga mendadak.', NULL, 'pending'),
+  ('leave-reza-2026-09-14', 'emp-reza', 'family', '2026-09-14', '2026-09-15', 2, 'Acara keluarga di luar kota.', NULL, 'approved')
+ON CONFLICT (id) DO NOTHING;
+
 COMMIT;

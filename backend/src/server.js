@@ -13,6 +13,8 @@ const ROLE = Object.freeze({ EMPLOYEE: "employee", ADMIN: "admin" });
 const ATTENDANCE = Object.freeze({ RUNNING: "running", COMPLETED: "completed", CORRECTED: "corrected", REJECTED: "rejected" });
 const OVERTIME = Object.freeze({ RUNNING: "running", COMPLETED: "completed", APPROVED: "approved", CORRECTED: "corrected", REJECTED: "rejected" });
 const PAYROLL = Object.freeze({ DRAFT: "draft", REVIEWED: "reviewed", PUBLISHED: "published", PAID: "paid" });
+const LEAVE = Object.freeze({ PENDING: "pending", APPROVED: "approved", REJECTED: "rejected" });
+const LEAVE_TYPES = new Set(["sick", "personal", "family", "other"]);
 
 const jakartaDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" });
 const jakartaTimeFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -189,6 +191,12 @@ function durationText(minutes) {
 
 function rupiahText(value) {
   return `Rp${String(Math.round(Number(value || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+}
+
+function daysBetweenInclusive(start, end) {
+  const startDate = new Date(`${start}T00:00:00.000Z`);
+  const endDate = new Date(`${end}T00:00:00.000Z`);
+  return Math.max(1, Math.round((endDate - startDate) / 86400000) + 1);
 }
 
 function buildPayrollDocument(payroll, workDays, user) {
@@ -759,6 +767,64 @@ route("PATCH", "/api/attendance/:id/adjust", async (req, res, params) => {
   send(res, 200, { attendance });
 });
 
+route("GET", "/api/leaves", async (req, res) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const employeeId = user.role === ROLE.ADMIN ? url.searchParams.get("employee_id") : user.employee_id;
+  const status = url.searchParams.get("status");
+  if (employeeId && !canAccessEmployee(user, employeeId)) return error(res, 403, "Tidak boleh melihat pengajuan izin ini.");
+  const rows = await many(
+    `SELECT lr.*, e.name AS employee_name, e.employee_code
+     FROM leave_requests lr JOIN employees e ON e.id = lr.employee_id
+     WHERE ($1::text IS NULL OR lr.employee_id = $1)
+       AND ($2::text IS NULL OR lr.status = $2)
+     ORDER BY lr.created_at DESC`,
+    [employeeId || null, status || null]
+  );
+  send(res, 200, { leaves: rows });
+});
+
+route("POST", "/api/leaves", async (req, res) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  if (user.role !== ROLE.EMPLOYEE) return error(res, 403, "Pengajuan izin hanya untuk karyawan.");
+  const body = await readBody(req);
+  const type = String(body.type || "").trim();
+  const startDate = String(body.start_date || "").slice(0, 10);
+  const endDate = String(body.end_date || startDate).slice(0, 10);
+  const reason = String(body.reason || "").trim();
+  if (!LEAVE_TYPES.has(type)) return error(res, 422, "type harus sick, personal, family, atau other.");
+  if (!startDate || !endDate || startDate > endDate) return error(res, 422, "Rentang tanggal izin wajib valid.");
+  if (reason.length < 3) return error(res, 422, "Keterangan izin wajib diisi.");
+  const leave = await one(
+    `INSERT INTO leave_requests (id, employee_id, type, start_date, end_date, duration_days, reason, attachment, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8, 'pending', NOW(), NOW()) RETURNING *`,
+    [randomUUID(), user.employee_id, type, startDate, endDate, daysBetweenInclusive(startDate, endDate), reason, body.attachment || null]
+  );
+  await audit(user, "leave", leave.id, "submit", null, leave);
+  send(res, 201, { leave });
+});
+
+route("POST", "/api/leaves/:id/review", async (req, res, params) => {
+  const user = await requireAdmin(req, res);
+  if (!user) return;
+  const body = await readBody(req);
+  const before = await one("SELECT * FROM leave_requests WHERE id = $1", [params.id]);
+  if (!before) return error(res, 404, "Pengajuan izin tidak ditemukan.");
+  if (before.status !== LEAVE.PENDING) return error(res, 409, "Pengajuan izin sudah direview.");
+  if (!["approve", "reject"].includes(body.action)) return error(res, 422, "action harus approve atau reject.");
+  if (body.action === "reject" && !String(body.reason || "").trim()) return error(res, 422, "Alasan penolakan wajib diisi.");
+  const leave = await one(
+    `UPDATE leave_requests
+     SET status = $2, reviewed_by = $3, reviewed_at = NOW(), reject_reason = $4, updated_at = NOW()
+     WHERE id = $1 RETURNING *`,
+    [params.id, body.action === "approve" ? LEAVE.APPROVED : LEAVE.REJECTED, user.id, body.action === "reject" ? String(body.reason).trim() : null]
+  );
+  await audit(user, "leave", leave.id, `review_${body.action}`, before, leave);
+  send(res, 200, { leave });
+});
+
 route("GET", "/api/activity", async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
@@ -767,19 +833,22 @@ route("GET", "/api/activity", async (req, res) => {
   const activity = await many(
     `SELECT e.id AS employee_id, e.name AS employee_name,
        CASE
-         WHEN ot.id IS NOT NULL THEN 'lembur_berjalan'
-         WHEN a.status = 'running' THEN 'masuk'
-         WHEN a.check_out_time IS NOT NULL THEN 'pulang'
-         ELSE 'belum_masuk'
-       END AS status,
-       COALESCE(ot.start_time, a.check_out_time, a.check_in_time) AS time,
-       COALESCE(ot.project_name, a.project_name) AS project_name,
-       $1::date AS date
-     FROM employees e
-     LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
-     LEFT JOIN overtime ot ON ot.employee_id = e.id AND ot.date = $1::date AND ot.status = 'running'
-     WHERE e.status = 'active'
-     ORDER BY e.employee_code`,
+          WHEN ot.id IS NOT NULL THEN 'lembur_berjalan'
+          WHEN a.status = 'running' THEN 'masuk'
+          WHEN a.check_out_time IS NOT NULL THEN 'pulang'
+          WHEN lr.id IS NOT NULL AND lr.type = 'sick' THEN 'sakit'
+          WHEN lr.id IS NOT NULL THEN 'izin'
+          ELSE 'belum_masuk'
+        END AS status,
+        COALESCE(ot.start_time, a.check_out_time, a.check_in_time) AS time,
+        COALESCE(ot.project_name, a.project_name, lr.reason) AS project_name,
+        $1::date AS date
+      FROM employees e
+      LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
+      LEFT JOIN overtime ot ON ot.employee_id = e.id AND ot.date = $1::date AND ot.status = 'running'
+      LEFT JOIN leave_requests lr ON lr.employee_id = e.id AND $1::date BETWEEN lr.start_date AND lr.end_date AND lr.status = 'approved'
+      WHERE e.status = 'active'
+      ORDER BY e.employee_code`,
     [date]
   );
   send(res, 200, { activity });
@@ -792,11 +861,15 @@ route("GET", "/api/admin/dashboard", async (req, res) => {
   const summary = await one(
     `SELECT
        COUNT(*) FILTER (WHERE a.status = 'running')::int AS masuk,
-       COUNT(*) FILTER (WHERE a.id IS NULL)::int AS belum_masuk,
+       COUNT(*) FILTER (WHERE a.id IS NULL AND lr.id IS NULL)::int AS belum_masuk,
+       COUNT(*) FILTER (WHERE lr.id IS NOT NULL)::int AS izin,
+       COUNT(*) FILTER (WHERE lr.type = 'sick')::int AS sakit,
        (SELECT COUNT(*)::int FROM overtime WHERE date = $1::date AND status = 'running') AS lembur,
-       (SELECT COUNT(*)::int FROM overtime WHERE status = 'completed') AS pending_overtime
-     FROM employees e LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
-     WHERE e.status = 'active'`,
+       (SELECT COUNT(*)::int FROM overtime WHERE status = 'completed') AS pending_overtime,
+       (SELECT COUNT(*)::int FROM leave_requests WHERE status = 'pending') AS pending_leave
+      FROM employees e LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = $1::date
+      LEFT JOIN leave_requests lr ON lr.employee_id = e.id AND $1::date BETWEEN lr.start_date AND lr.end_date AND lr.status = 'approved'
+      WHERE e.status = 'active'`,
     [date]
   );
   send(res, 200, { date, summary });

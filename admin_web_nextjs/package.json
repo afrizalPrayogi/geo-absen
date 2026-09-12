@@ -1,0 +1,16 @@
+{
+  "name": "admin-web-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3001",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0 -p 3001",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^16.3.5",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
